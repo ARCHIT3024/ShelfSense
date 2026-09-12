@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/di.dart';
 import '../../app/theme.dart';
 import '../../core/logger.dart';
+import '../../core/result.dart';
+import '../../domain/models/models.dart' show RawBox;
 import '../../data/db/database.dart';
 import '../../ml/common/image_crop.dart';
 import 'review_repository.dart';
@@ -202,6 +204,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
     final candidates = <RankedSku>[
       if (current != null) RankedSku(current, d.matchConfidence ?? 1.0),
     ];
+    // With the recogniser loaded, rank the enrolled SKUs for this box so
+    // the picker opens pre-filled with the top-3 (06_APP_FLOW §/review).
+    final embedder = ref.read(embedderProvider);
+    final index = ref.read(skuIndexProvider);
+    if (embedder != null && embedder.isLoaded && !index.isEmpty) {
+      final r = await embedder.embedBoxes(_photo!.filePath,
+          [RawBox(x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2, score: 1)]);
+      if (r case Ok(:final value) when value.first != null) {
+        for (final c in index.topMatches(value.first!, k: 3)) {
+          if (c.skuId == current?.id) continue;
+          final sku = data.skuById(c.skuId);
+          if (sku != null) candidates.add(RankedSku(sku, c.confidence));
+        }
+      }
+      if (!mounted) return;
+    }
     final result = await showSkuPicker(
       context,
       detection: d,

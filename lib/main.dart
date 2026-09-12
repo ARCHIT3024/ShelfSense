@@ -8,6 +8,8 @@ import 'app/theme.dart';
 import 'data/db/database.dart';
 import 'data/seed/seed_data.dart';
 import 'core/logger.dart';
+import 'core/result.dart';
+import 'features/enrolment/enrolment_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +58,22 @@ class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp> {
     // now so the first shutter press finds it ready, but never block the
     // UI or the app start on it. A missing/invalid model just logs.
     ref.read(detectorProvider)?.load();
+    _loadRecogniser();
+  }
+
+  /// Embedder → back-fill embeddings for shots taken before the model
+  /// existed → load the index. Fire-and-forget; each step logs on failure.
+  Future<void> _loadRecogniser() async {
+    final embedder = ref.read(embedderProvider);
+    if (embedder == null) return;
+    if (await embedder.load() case Err()) return;
+    try {
+      await EnrolmentRepository(ref.read(dbProvider), embedder)
+          .backfillPendingEmbeddings();
+    } catch (e) {
+      AppLogger.e('Main', 'Embedding back-fill failed', e);
+    }
+    await ref.read(skuIndexProvider).refresh();
   }
 
   @override

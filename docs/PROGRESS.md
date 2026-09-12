@@ -81,6 +81,30 @@ Three things had to change to get here, all committed:
    `libLiteRt.so` with a different API and the FFI can't bind it. Inference runs on the main isolate
    (32 ms, behind the shutter overlay). `kDetMaxBoxes` raised 100 → 300.
 
+## Embedder integration (T-20 done in code, waiting on T-14's model)
+
+`lib/ml/embedder/tflite_embedder.dart` implements `EmbedderService`; `sku_index.dart` holds the
+in-memory index, pure cosine ranking (`rankCandidates`) and threshold routing (`routeScore`),
+unit-tested in `test/ml/sku_index_test.dart`. `embedderProvider` / `skuIndexProvider` are in
+`di.dart`; `main.dart` loads the embedder in the background, back-fills embeddings for every
+enrolment shot already on disk, then loads the index.
+
+**For A — to go live, drop `embedder_int8.tflite` (or `_fp16` / `_fp32`) into `assets/models/`
+and rebuild. Nothing else.** Contract: input `[1,224,224,3]` NHWC or `[1,3,224,224]` NCHW, float32
+or int8/uint8 (quantisation params read from the tensor), ImageNet mean/std normalisation applied
+in-app; output `[1,D]` float32 or quantised — 128-d expected, any D accepted, L2-normalised again
+in-app. Verify with `adb logcat -s flutter | grep -E "TfliteEmbedder|SkuIndex"`: the tensor dump,
+`Loaded: …`, `Index: N vectors over M SKUs`, and per shutter `N crops in X ms (pre · infer)` +
+`Recognised a + b low-confidence of n`.
+
+What it does once loaded: capture pipeline embeds every detected box once (still decoded once
+for all boxes) and writes `sku_id` / `match_confidence` / `match_method='embedding'` using the
+0.72 / 0.55 bands — green, amber "?" or blue on `/review`; the SKU picker opens with the top-3
+ranked candidates for that box; every `/enrol` shot is embedded and the index refreshed
+immediately; step 3 "Test it now" re-runs detector + embedder on the most recent shelf photo and
+reports "N of M packs recognised as <SKU>". Inference is on the main isolate with raw byte I/O,
+for the same reasons as the detector.
+
 ## Detector integration notes (kept for reference)
 
 `lib/ml/detector/tflite_detector.dart` implements `DetectorService`; `yolo_decode.dart` holds
@@ -155,7 +179,7 @@ whoever has the phone (see compliance gaps above).**
 ### Interfaces exist, implementations don't (no models trained/exported yet)
 
 - `lib/ml/detector/` — `DetectorService` interface only. **T-12/T-13**: no `.tflite` model, no decode/NMS logic.
-- `lib/ml/embedder/` — `EmbedderService`/`SkuIndex` interfaces only. **T-14/T-20**: no embedder model.
+- `lib/ml/embedder/` — service + index implemented (T-20); **T-14** model file still missing.
 - `lib/ml/ocr/` — `OcrService` interface only. **T-30**: expected — L3 item, strictly time-boxed.
 - `lib/ml/llm/` — `LlmService` interface only. **T-23/T-26**: no `flutter_gemma` wiring yet.
 - `lib/ml/asr/` — `AsrService` interface only. **T-29**: expected — L2 item.
