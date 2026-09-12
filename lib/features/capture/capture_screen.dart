@@ -177,6 +177,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     // Stage B: embed every box against the enrolled index.
     final embedder = ref.read(embedderProvider);
     final index = ref.read(skuIndexProvider);
+    final thresholds = ref.read(thresholdsProvider);
     final matches = List<SkuCandidate?>.filled(boxes.length, null);
     if (boxes.isNotEmpty && embedder != null && embedder.isLoaded && !index.isEmpty) {
       if (mounted) setState(() => _processingStage = 'Recognising…');
@@ -189,7 +190,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             if (v == null) continue;
             final top = index.topMatches(v, k: 1);
             if (top.isEmpty) continue;
-            switch (routeScore(top.first.confidence)) {
+            switch (routeScore(top.first.confidence,
+                high: thresholds.matchHigh, low: thresholds.matchLow)) {
               case MatchRoute.accept:
                 matches[i] = top.first;
                 accepted++;

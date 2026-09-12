@@ -57,8 +57,22 @@ class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp> {
     // Models load lazily and independently (TRD §4.3): start the detector
     // now so the first shutter press finds it ready, but never block the
     // UI or the app start on it. A missing/invalid model just logs.
+    _loadThresholds();
     ref.read(detectorProvider)?.load();
     _loadRecogniser();
+  }
+
+  /// Persisted slider values from /diagnostics → live thresholds.
+  Future<void> _loadThresholds() async {
+    try {
+      final db = ref.read(dbProvider);
+      final rows = await db.select(db.appSettings).get();
+      ref
+          .read(thresholdsProvider)
+          .applySettings({for (final r in rows) r.key: r.value});
+    } catch (e) {
+      AppLogger.e('Main', 'Threshold load failed', e);
+    }
   }
 
   /// Embedder → back-fill embeddings for shots taken before the model
