@@ -62,6 +62,7 @@ generated XLSX verified free of watermark text; release APK verified on the phys
 | A-08 | Network calls on demo path | 0 | 10 runs executed with aeroplane mode on (`cmd connectivity airplane-mode enable`) | ✅ |
 | A-09 | LLM disabled, every screen works | | no LLM integrated; deterministic record fills all fields | ✅ |
 | A-10 | Peak RSS during detection | ≤ 1.5 GB | 370 MB idle → 400 MB peak (250 ms sampling) | ✅ |
+| F-24 | Wi-Fi handover server | laptop pulls files | 13 Sep 02:33: from a laptop on the phone's hotspot, `GET /` 200 (14.9 KB index, 33 ms), `GET /files/<xlsx>` 200 (4,919 B, valid workbook); server stops on toggle-off | ✅ |
 
 ## Release build notes (12 Sep, G2) — read before touching `android/`
 
