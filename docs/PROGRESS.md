@@ -5,7 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~16:45 IST (R2). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~18:30 IST (R2, after C's merge). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -14,7 +14,9 @@ actually in.**
 
 ## ⚠️ Compliance gaps still open
 
-1. **Syncfusion Community Licence** — the legal registration (an account sign-up at
+1. **Syncfusion Community Licence** — **watermark check done 12 Sep 18:25: an XLSX produced by
+   `buildOrderXlsxBytes()` contains no Syncfusion/trial/licence text in any XML part**, so this is
+   purely the legal registration (an account sign-up at
    https://www.syncfusion.com/products/communitylicense, not an in-code key — verified this
    session that `syncfusion_flutter_xlsio` 34.2.7 has no `registerLicense` API) has not been
    confirmed done by a human. Do this before the first real export, not at 06:00. See
@@ -58,6 +60,14 @@ Also fixed: `beat_screen.dart` "Load Demo Beat" didn't refresh the list after se
 FutureBuilder's future was recreated in `build`, and `markNeedsBuild` on the builder context
 never re-ran it). Now a `ConsumerStatefulWidget` holding the future and re-creating it after seed.
 
+## L0 on-device status (12 Sep 18:23, after C's push — build `1f63108` + merge fixes)
+
+Full path driven on the iQOO 15: `/beat` → store → **Start Visit** → shutter → `/review` (stub
+boxes) → tag one → **Continue** → `/shelf` **(still the stub screen)** → **Continue** → `/order`
+(C's real screen: 8 SKUs drafted by ReorderEngine from the planogram diff, steppers step by one
+case, running total) → **Confirm** → "Visit confirmed · 8 lines" with Share XLSX / Share CSV.
+**L0 is demoable except `/shelf`** — that screen is the one remaining gap between review and order.
+
 ## Repo / git state
 
 - Remote: `https://github.com/ARCHIT3024/ShelfSense.git`, branch `main`.
@@ -88,12 +98,14 @@ whoever has the phone (see compliance gaps above).**
 | **T-03** | `flutter create` done, all packages added, portrait lock + status bar styling in `main.dart`, theme tokens built | `lib/main.dart`, `lib/app/theme.dart` (`AppColors`/`AppText`/`Sp` tokens used everywhere downstream) |
 | **T-04** | Full drift schema — all 11 tables from `05_DATA_SCHEMA.md`, code-gen'd, seed loader | `lib/data/db/tables/*.dart`, `lib/data/db/database.dart` + generated `database.g.dart` (build_runner already run), `lib/data/seed/seed_data.dart` reading `assets/seed/seed_*.json` |
 | **T-05 (partial)** | `/beat` and `/store/:storeId` routes wired and screens built against seeded data | `lib/app/router.dart`, `lib/features/beat/beat_screen.dart`, `lib/features/store/store_screen.dart` — both read live from `dbProvider`. No `/boot` splash route exists; router's `initialLocation` is `/beat` directly. |
-| **T-06 (mostly)** | `/capture/:visitId` — camera still-capture screen substantially built | `lib/features/capture/capture_screen.dart` — **still not verified: actually installed/cold-started on the physical iQOO 15** |
+| **T-06** | `/capture/:visitId` — camera still-capture screen built; **release APK installed and cold-started on the physical iQOO 15 (12 Sep 16:08)** | `lib/features/capture/capture_screen.dart`; build fixes in `android/` (see "Release build notes"). Camera screen itself not yet exercised on-device — that's T-10. |
 | **T-08 (C — complete)** | `xlsx_builder.dart` — production XLSX with styled headers, totals, freeze pane, override highlighting. `buildOrderXlsxBytes()` in-memory API for tests. 9 unit tests passing. | `lib/output/xlsx_builder.dart`, `test/output/xlsx_builder_test.dart`. Committed `3ad1342`. **⚠️ Still need on-device watermark check — run `writeHelloWorldXlsx()` on iQOO 15 before trusting real exports.** |
 | **T-08 (C — complete)** | `csv_builder.dart` — RFC 4180 with CRLF, UTF-8 BOM, field quoting. `buildOrderCsvBytes()` in-memory API. 21 unit tests passing. | `lib/output/csv_builder.dart`, `test/output/csv_builder_test.dart`. Committed `021fc8f`. |
 | **T-18 (C — complete)** | `facing_counter.dart` — counts facings per SKU from `MatchedBox` list, excludes gaps, tallies unknowns, returns unmodifiable `FacingCount`. 11 tests. | `lib/domain/services/facing_counter.dart`, `test/domain/facing_counter_test.dart`. |
 | **T-18 (C — complete)** | `planogram_diff.dart` — diffs counted vs target facings → `List<ShelfFact>` with in_stock / below_plan / stockout / unlisted. UUID per fact, visitId + computedAt propagated. 12 tests. | `lib/domain/services/planogram_diff.dart`, `test/domain/planogram_diff_test.dart`. |
 | **T-28 prep (C — partial)** | `reorder_engine.dart` — `suggest()` with TRD §5.4 formula: trailing history floor, whole-case rounding, absurd-qty cap, stockout-first sort. `medianOrZero()` helper exposed. 21 tests. Awaiting T-19 wiring and `value_paise` unit clarification with B. | `lib/domain/services/reorder_engine.dart`, `test/domain/reorder_engine_test.dart`. |
+| **T-15** | `/review` — full implementation, verified on the iQOO 15 (12 Sep ~16:27): pinch-zoom/pan, boxes colour-coded by state with staggered reveal, pulsing unmatched, chips auto-hide when small, tap → SKU picker sheet (crop thumb, ranked candidates slot, search, **Enrol this pack** → `/enrol` with a cropped JPEG), long-press → resize/delete, resize mode with corner handles + move, long-press-drag on empty area draws a new box, summary banner with expandable untagged list that zooms to each box, `Continue (N untagged)`. Every correction writes `override_events` + `was_corrected`. | `lib/features/review/{review_screen,review_repository,sku_picker_sheet,crop_util}.dart`. Candidate ranking (`RankedSku`) is wired but empty until T-20's embedder exists. `/enrol` receives `extra: {cropPath, detectionId}`. |
+| **T-22** | `/enrol` — 3-step flow verified on the iQOO 15 (12 Sep ~16:40) end-to-end from `/review`: Enrol this pack → step 1 (crop preloaded as shot 1; New SKU form with name/grammage/unit + collapsible brand/variant/MRP/case, or Existing SKU search) → step 2 (8-slot bright/dim/angled/occluded coverage grid with auto-advance, live preview with a pack guide, shutter crops to the guide, long-press a slot to delete) → step 3 (status summary, Add more shots, Done). Done tags the originating `/review` box with the new SKU and pops back; the box goes green immediately. | `lib/features/enrolment/{enrolment_screen,enrolment_repository,enrol_camera}.dart`. **Shots are stored as crops on disk (`<docs>/enrol/<skuId>/<ms>_<context>.jpg`); `sku_embeddings` rows are only written when `embedderProvider` (in `di.dart`, currently `null`) is non-null.** T-20 must (a) provide the `EmbedderService` there and (b) call `EnrolmentRepository.backfillPendingEmbeddings()` once after load so pre-model shots become recognisable. "Test it now" re-run against the last shelf photo is not implemented — it needs detector + embedder. Crop-to-guide should become crop-to-largest-detected-box once T-13 lands (`enrol_camera.dart` `_kGuideFrac`). |
 | Support infra | Result/failure types, ids, structured logger, DI providers | `lib/core/result.dart`, `lib/core/failures.dart`, `lib/core/ids.dart`, `lib/core/logger.dart`, `lib/app/di.dart` |
 | ML threshold constants | Single source of truth for detector conf/IoU, matcher accept/reject bands, enrolment shot targets, gap-detection area | `lib/ml/common/thresholds.dart` |
 | Domain models | `lib/domain/models/models.dart` | |
