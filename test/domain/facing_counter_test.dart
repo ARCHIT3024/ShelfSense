@@ -166,4 +166,35 @@ void main() {
     expect(c.totalBoxes, 8);
     expect(c.matchedFacings, 5);
   });
+
+  group('low-confidence matches (T-20)', () {
+    test('are tallied as unknown, not as facings', () {
+      const boxes = [
+        MatchedBox(
+          id: 'a',
+          box: RawBox(x1: 0, y1: 0, x2: 0.1, y2: 0.1, score: 0.9),
+          detConfidence: 0.9,
+          skuId: 'sku-1',
+          matchConfidence: 0.60, // between kMatchLow and kMatchHigh
+          method: MatchMethod.embedding,
+          isGap: false,
+          wasCorrected: false,
+        ),
+        MatchedBox(
+          id: 'b',
+          box: RawBox(x1: 0.2, y1: 0, x2: 0.3, y2: 0.1, score: 0.9),
+          detConfidence: 0.9,
+          skuId: 'sku-1',
+          matchConfidence: 0.85,
+          method: MatchMethod.embedding,
+          isGap: false,
+          wasCorrected: false,
+        ),
+      ];
+      final r = const FacingCounter().count(boxes);
+      expect(r.isOk, isTrue);
+      expect(r.valueOrNull!.bySku['sku-1'], 1);
+      expect(r.valueOrNull!.unknownCount, 1);
+    });
+  });
 }

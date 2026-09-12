@@ -76,7 +76,11 @@ final class FacingCounter {
           gapCount++;
           continue;
         }
-        if (!box.isMatched || box.skuId == null) {
+        // TRD §5.1: only *accepted* matches count. A low-confidence match
+        // (kMatchLow..kMatchHigh) keeps its candidate sku_id so /review can
+        // show the amber "?" chip, but is not a facing until the rep
+        // confirms it (which sets match_method = manual, confidence 1.0).
+        if (!box.isMatched || box.skuId == null || box.isLowConfidence) {
           unknownCount++;
           continue;
         }
