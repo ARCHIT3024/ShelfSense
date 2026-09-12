@@ -6,12 +6,15 @@
 /// Owned by C (provider + export wiring). B owns the visual polish.
 library;
 
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/di.dart';
 import '../../app/theme.dart';
+import '../../data/db/database.dart' show SkusData;
 import '../../domain/models/models.dart';
 import 'order_provider.dart';
 
@@ -79,16 +82,170 @@ class _OrderBody extends ConsumerWidget {
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: Sp.sm),
-            itemCount: state.lines.length,
+            // Last item is the secondary "+ Add line" action (04_UIUX §/order).
+            itemCount: state.lines.length + 1,
             separatorBuilder: (_, _) =>
                 const Divider(height: 1, indent: Sp.screen),
-            itemBuilder: (_, i) => _OrderLineRow(
-              line: state.lines[i],
-              visitId: visitId,
-            ),
+            itemBuilder: (_, i) => i == state.lines.length
+                ? _AddLineButton(visitId: visitId, state: state)
+                : _OrderLineRow(
+                    line: state.lines[i],
+                    visitId: visitId,
+                  ),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// + Add line — what the owner asks for that isn't on the shelf
+// ---------------------------------------------------------------------------
+
+class _AddLineButton extends ConsumerWidget {
+  const _AddLineButton({required this.visitId, required this.state});
+  final String visitId;
+  final OrderState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Sp.screen, Sp.md, Sp.screen, Sp.lg),
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.add),
+        label: const Text('Add line'),
+        onPressed: () async {
+          final sku = await showModalBottomSheet<SkusData>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: AppColors.surface,
+            shape: const RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+            ),
+            builder: (_) => _AddLineSheet(
+              alreadyDrafted: state.lines.map((l) => l.skuId).toSet(),
+            ),
+          );
+          if (sku != null) {
+            ref.read(orderProvider(visitId).notifier).addLine(sku);
+          }
+        },
+      ),
+    );
+  }
+}
+
+/// Searchable catalogue list; SKUs already on the draft are shown disabled.
+class _AddLineSheet extends ConsumerStatefulWidget {
+  const _AddLineSheet({required this.alreadyDrafted});
+  final Set<String> alreadyDrafted;
+
+  @override
+  ConsumerState<_AddLineSheet> createState() => _AddLineSheetState();
+}
+
+class _AddLineSheetState extends ConsumerState<_AddLineSheet> {
+  List<SkusData> _skus = const [];
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final db = ref.read(dbProvider);
+    (db.select(db.skus)
+          ..where((t) => t.isActive.equals(true))
+          ..orderBy([(t) => drift.OrderingTerm.asc(t.name)]))
+        .get()
+        .then((rows) {
+      if (mounted) setState(() => _skus = rows);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.toLowerCase();
+    final list = q.isEmpty
+        ? _skus
+        : _skus
+            .where((s) =>
+                s.name.toLowerCase().contains(q) ||
+                s.code.toLowerCase().contains(q) ||
+                (s.brand?.toLowerCase().contains(q) ?? false))
+            .toList();
+    final height = MediaQuery.of(context).size.height * 0.75;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SizedBox(
+        height: height,
+        child: Column(
+          children: [
+            const SizedBox(height: Sp.sm),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(Radii.pill),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  Sp.screen, Sp.lg, Sp.screen, Sp.sm),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Add a line', style: AppText.heading),
+                  ),
+                  Text('${list.length} SKUs', style: AppText.label),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Sp.screen),
+              child: TextField(
+                onChanged: (v) => setState(() => _query = v.trim()),
+                textInputAction: TextInputAction.search,
+                decoration: const InputDecoration(
+                  hintText: 'Search name, code or brand',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            const SizedBox(height: Sp.sm),
+            Expanded(
+              child: ListView.builder(
+                itemCount: list.length,
+                itemBuilder: (_, i) {
+                  final s = list[i];
+                  final drafted = widget.alreadyDrafted.contains(s.id);
+                  return ListTile(
+                    minTileHeight: Tap.counter,
+                    enabled: !drafted,
+                    onTap: drafted ? null : () => Navigator.pop(context, s),
+                    title: Text(s.name, style: AppText.body),
+                    subtitle: Text(
+                      [
+                        s.code,
+                        if (s.brand != null) s.brand!,
+                        if (drafted) 'already on the order',
+                      ].join(' · '),
+                      style: AppText.label,
+                    ),
+                    trailing: Text(
+                      '${s.caseSize}/case · ₹${(s.mrpPaise / 100).toStringAsFixed(0)}',
+                      style: AppText.mono,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -178,9 +335,19 @@ class _OrderLineRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Sp.screen, vertical: Sp.md),
+    return Container(
+      // 4 dp primary bar on the left edge marks a rep-edited line
+      // (04_UIUX §/order) — a colour AND the "edited" word, never colour alone.
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: line.wasOverridden ? AppColors.primary : Colors.transparent,
+            width: 4,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          Sp.screen - 4, Sp.md, Sp.screen, Sp.md),
       child: Row(
         children: [
           // SKU info
@@ -271,12 +438,22 @@ class _Stepper extends StatelessWidget {
           enabled: value > 0,
           onTap: () => onChanged((value - step).clamp(0, 9999)),
         ),
-        SizedBox(
-          width: 44,
-          child: Text(
-            value.toString(),
-            textAlign: TextAlign.center,
-            style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+        // Long-press the value → numeric keypad, for a jump like 4 → 48.
+        GestureDetector(
+          onLongPress: () async {
+            final typed = await _askQuantity(context, value);
+            if (typed != null) onChanged(typed);
+          },
+          child: SizedBox(
+            width: 44,
+            height: Tap.min,
+            child: Center(
+              child: Text(
+                value.toString(),
+                textAlign: TextAlign.center,
+                style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
         ),
         _StepBtn(
@@ -287,6 +464,38 @@ class _Stepper extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Numeric keypad dialog for the stepper value. Returns null on cancel.
+Future<int?> _askQuantity(BuildContext context, int current) {
+  final controller = TextEditingController(text: current.toString());
+  return showDialog<int>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text('Quantity', style: AppText.heading),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        style: AppText.display,
+        onSubmitted: (v) => Navigator.pop(ctx, int.tryParse(v.trim())),
+        decoration: const InputDecoration(hintText: 'units'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () =>
+              Navigator.pop(ctx, int.tryParse(controller.text.trim())),
+          child: const Text('Set'),
+        ),
+      ],
+    ),
+  ).then((v) => v?.clamp(0, 9999));
 }
 
 class _StepBtn extends StatelessWidget {
