@@ -9,9 +9,11 @@ import '../../app/theme.dart';
 import '../../core/ids.dart';
 import '../../core/logger.dart';
 import '../../core/result.dart';
-import '../../data/db/database.dart' hide OrderLine;
-import '../../domain/models/models.dart' show OrderLine;
+import '../../data/db/database.dart' hide OrderLine, ShelfFact;
+import '../../domain/models/models.dart'
+    show OrderLine, ShelfFact, ShelfStatus;
 import '../../output/csv_builder.dart';
+import '../../output/pdf_builder.dart';
 import '../../output/xlsx_builder.dart';
 
 const _tag = 'ExportScreen';
@@ -22,16 +24,35 @@ class _VisitExport {
     required this.visit,
     required this.store,
     required this.beatName,
+    required this.beatCode,
+    required this.repName,
     required this.lines,
+    required this.shelfFacts,
   });
   final Visit visit;
   final Store? store;
   final String beatName;
+  final String beatCode;
+  final String? repName;
   final List<OrderLine> lines;
+  final List<ShelfFact> shelfFacts;
 
   int get valuePaise => lines.fold(0, (s, l) => s + l.valuePaise);
   String get storeName => store?.name ?? visit.storeId;
   String get storeCode => store?.code ?? visit.storeId;
+
+  /// Input to the PDF builder — narrative from the visit row (deterministic
+  /// or LLM), falling back to the deterministic template inside the builder.
+  PdfVisit toPdfVisit() => PdfVisit(
+        storeName: storeName,
+        storeCode: storeCode,
+        confirmedAt: DateTime.fromMillisecondsSinceEpoch(
+            visit.confirmedAt ?? visit.startedAt),
+        shelfFacts: shelfFacts,
+        lines: lines,
+        summaryProse: visit.llmSummary,
+        reorderRationale: visit.llmRationale,
+      );
 }
 
 /// Confirmed visits for the (single seeded) beat, newest first.
@@ -73,11 +94,35 @@ final _beatExportProvider =
           createdAt: r.createdAt,
         ),
     ];
+    final factRows = await (db.select(db.shelfFacts)
+          ..where((t) => t.visitId.equals(v.id)))
+        .get();
+    final facts = [
+      for (final f in factRows)
+        ShelfFact(
+          id: f.id,
+          visitId: f.visitId,
+          skuId: f.skuId,
+          skuName: skus[f.skuId]?.name,
+          skuCode: skus[f.skuId]?.code,
+          grammageLabel: _grammage(skus[f.skuId]),
+          detectedFacings: f.detectedFacings,
+          targetFacings: f.targetFacings,
+          status: ShelfStatus.values.firstWhere(
+            (s) => s.name == f.status,
+            orElse: () => ShelfStatus.unlisted,
+          ),
+          computedAt: f.computedAt,
+        ),
+    ];
     out.add(_VisitExport(
       visit: v,
       store: stores[v.storeId],
       beatName: beats[v.beatId]?.name ?? v.beatId,
+      beatCode: beats[v.beatId]?.code ?? v.beatId,
+      repName: beats[v.beatId]?.repName,
       lines: lines,
+      shelfFacts: facts,
     ));
   }
   return out;
@@ -90,8 +135,9 @@ String _grammage(SkusData? s) {
   return '$disp ${s.grammageUnit ?? ''}'.trim();
 }
 
-/// `/export` — beat summary → per-visit XLSX / CSV, generated on the phone.
-/// PDF beat summary is the L2 deliverable (T-29) and is not offered yet.
+/// `/export` — beat summary → per-visit XLSX / CSV plus one beat-level PDF,
+/// all generated on the phone (04_UIUX §/export: three artefact cards,
+/// one Generate all).
 class ExportScreen extends ConsumerStatefulWidget {
   const ExportScreen({super.key});
 
@@ -106,8 +152,23 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       List<_VisitExport> visits, {
       required bool xlsx,
       required bool csv,
+      bool pdf = false,
     }) async {
     final files = <XFile>[];
+    // One PDF for the whole beat (or the selected visit), not one per store.
+    if (pdf && visits.isNotEmpty) {
+      switch (await buildBeatSummaryPdf(
+        beatName: visits.first.beatName,
+        beatCode: visits.first.beatCode,
+        repName: visits.first.repName,
+        visits: [for (final v in visits) v.toPdfVisit()],
+      )) {
+        case Ok(:final value):
+          files.add(XFile(value, mimeType: 'application/pdf'));
+        case Err(:final failure):
+          AppLogger.e(_tag, 'PDF failed', failure);
+      }
+    }
     for (final v in visits) {
       if (xlsx) {
         switch (await buildOrderXlsx(
@@ -137,11 +198,11 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   }
 
   Future<void> _share(List<_VisitExport> visits,
-      {required bool xlsx, required bool csv}) async {
+      {required bool xlsx, required bool csv, bool pdf = false}) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final files = await _generate(visits, xlsx: xlsx, csv: csv);
+      final files = await _generate(visits, xlsx: xlsx, csv: csv, pdf: pdf);
       if (files.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -150,18 +211,24 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         return;
       }
       // Record the batch (05_DATA_SCHEMA §12) when it's the whole beat.
-      if (visits.length > 1 || (xlsx && csv)) {
+      if (visits.length > 1 || (xlsx && csv) || pdf) {
         final db = ref.read(dbProvider);
+        String? joined(String ext) {
+          final v = files
+              .where((f) => f.path.endsWith(ext))
+              .map((f) => f.path)
+              .join(';');
+          return v.isEmpty ? null : v;
+        }
         await db.into(db.exportBatches).insert(ExportBatchesCompanion.insert(
               id: newId(),
               beatId: visits.first.visit.beatId,
               visitCount: visits.length,
               lineCount: visits.fold(0, (s, v) => s + v.lines.length),
               totalValuePaise: visits.fold(0, (s, v) => s + v.valuePaise),
-              xlsxPath: drift.Value(
-                  files.where((f) => f.path.endsWith('.xlsx')).map((f) => f.path).join(';')),
-              csvPath: drift.Value(
-                  files.where((f) => f.path.endsWith('.csv')).map((f) => f.path).join(';')),
+              xlsxPath: drift.Value(joined('.xlsx')),
+              csvPath: drift.Value(joined('.csv')),
+              pdfPath: drift.Value(joined('.pdf')),
               createdAt: DateTime.now().millisecondsSinceEpoch,
             ));
       }
@@ -205,11 +272,12 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                   child: FilledButton.icon(
                     onPressed: _busy
                         ? null
-                        : () => _share(visits, xlsx: true, csv: true),
+                        : () => _share(visits,
+                            xlsx: true, csv: true, pdf: true),
                     icon: const Icon(Icons.ios_share),
                     label: Text(_busy
                         ? 'Generating…'
-                        : 'Generate all · XLSX + CSV'),
+                        : 'Generate all · XLSX + CSV + PDF'),
                   ),
                 ),
               ),
@@ -230,6 +298,15 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           '${visits.length} visit${visits.length == 1 ? '' : 's'}'
           '  ·  $lines lines  ·  ₹${money.format(value ~/ 100)}',
           style: AppText.mono.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: Sp.md),
+        // Beat-level artefact: one PDF covering every confirmed visit.
+        OutlinedButton.icon(
+          onPressed: _busy
+              ? null
+              : () => _share(visits, xlsx: false, csv: false, pdf: true),
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+          label: const Text('Beat summary PDF'),
         ),
         const SizedBox(height: Sp.lg),
         for (final v in visits) ...[
@@ -286,11 +363,6 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           ),
           const SizedBox(height: Sp.sm),
         ],
-        const SizedBox(height: Sp.lg),
-        Text(
-          'PDF beat summary arrives with the voice-note visit record (L2).',
-          style: AppText.label,
-        ),
       ],
     );
   }
