@@ -151,7 +151,7 @@ class _EnrolCameraState extends State<EnrolCamera>
       return Center(child: Text(_error!, style: AppText.body));
     }
     if (c == null || !c.value.isInitialized) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppColors.primary));
     }
     final portraitAspect = 1 / c.value.aspectRatio;
@@ -202,7 +202,7 @@ class _EnrolCameraState extends State<EnrolCamera>
           Container(
             color: Colors.black.withValues(alpha: 0.5),
             alignment: Alignment.center,
-            child: const CircularProgressIndicator(color: AppColors.primary),
+            child: CircularProgressIndicator(color: AppColors.primary),
           ),
         Positioned(
           bottom: Sp.lg,

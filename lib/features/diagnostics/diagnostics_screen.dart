@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/di.dart';
 import '../../app/theme.dart';
+import '../../app/theme_mode.dart';
 import '../../core/logger.dart';
 import '../../ml/detector/tflite_detector.dart';
 import '../../ml/embedder/tflite_embedder.dart';
@@ -115,7 +116,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
               child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(verb, style: const TextStyle(color: AppColors.danger)),
+            child: Text(verb, style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -312,7 +313,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
                       Text(_connectivity ?? 'Checking…',
                           style: AppText.display),
                       const SizedBox(height: Sp.xs),
-                      const Text(
+                      Text(
                         'The app never uses the network in the core path. '
                         'Capture, recognition, diff, order and export all run '
                         'on this handset.',
@@ -345,11 +346,49 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
+                    side: BorderSide(color: AppColors.danger),
                   ),
                   onPressed: _busy ? null : _resetDemoData,
                   icon: const Icon(Icons.delete_sweep_outlined),
                   label: const Text('Reset demo data'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Sp.xl),
+          const _SectionLabel('Appearance'),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Follow the phone, or force light or dark.',
+                    style: AppText.label),
+                const SizedBox(height: Sp.md),
+                SegmentedButton<ThemeMode>(
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: AppColors.primary,
+                    selectedForegroundColor: AppColors.onPrimary,
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: AppColors.border),
+                  ),
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                        value: ThemeMode.system,
+                        icon: Icon(Icons.brightness_auto),
+                        label: Text('System')),
+                    ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode),
+                        label: Text('Light')),
+                    ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode),
+                        label: Text('Dark')),
+                  ],
+                  selected: {ref.watch(themeModeProvider)},
+                  onSelectionChanged: (s) =>
+                      ref.read(themeModeProvider.notifier).set(s.first),
                 ),
               ],
             ),

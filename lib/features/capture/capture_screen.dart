@@ -313,7 +313,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           if (_controller != null && _controller!.value.isInitialized)
             CameraPreview(_controller!)
           else
-            const Center(
+            Center(
                 child: CircularProgressIndicator(color: AppColors.primary)),
 
           // Framing guide (faint rack outline)
@@ -468,7 +468,7 @@ class _ProcessingOverlay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 64, height: 64,
             child: CircularProgressIndicator(
               color: AppColors.primary, strokeWidth: 3),

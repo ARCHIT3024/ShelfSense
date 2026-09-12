@@ -82,7 +82,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
               child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove',
+              child: Text('Remove',
                   style: TextStyle(color: AppColors.danger))),
         ],
       ),
@@ -103,7 +103,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Catalogue')),
       body: async.when(
-        loading: () => const Center(
+        loading: () => Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
         error: (e, _) => Center(
           child: Padding(

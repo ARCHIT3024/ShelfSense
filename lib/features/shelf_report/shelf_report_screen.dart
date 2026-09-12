@@ -36,7 +36,7 @@ class ShelfReportScreen extends ConsumerWidget {
         ],
       ),
       body: report.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
         error: (e, _) => Center(
@@ -149,7 +149,7 @@ class _FactRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: Tap.counter),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
         child: IntrinsicHeight(
@@ -273,7 +273,7 @@ class _Footer extends StatelessWidget {
         horizontal: Sp.screen,
         vertical: Sp.md,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -287,7 +287,7 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(Sp.xxl),
         child: Column(

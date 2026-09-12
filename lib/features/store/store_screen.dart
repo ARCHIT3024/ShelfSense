@@ -22,7 +22,7 @@ class StoreScreen extends ConsumerWidget {
       future: _load(db),
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const Scaffold(
+          return Scaffold(
               body: Center(
                   child: CircularProgressIndicator(color: AppColors.primary)));
         }
@@ -294,7 +294,7 @@ class _PlanRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: last
             ? null
-            : const Border(bottom: BorderSide(color: AppColors.border)),
+            : Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [

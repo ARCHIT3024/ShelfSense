@@ -50,11 +50,11 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
               children: [
                 Container(
                   width: 6, height: 6,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.offlineFg, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: Sp.xs),
-                const Text('OFFLINE',
+                Text('OFFLINE',
                     style: TextStyle(
                         fontSize: 11, fontWeight: FontWeight.w700,
                         color: AppColors.offlineFg, letterSpacing: 0.8)),
@@ -318,10 +318,10 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.storefront_outlined,
+            Icon(Icons.storefront_outlined,
                 size: 64, color: AppColors.textDisabled),
             const SizedBox(height: Sp.lg),
-            const Text('No stores in this beat',
+            Text('No stores in this beat',
                 style: AppText.heading, textAlign: TextAlign.center),
             const SizedBox(height: Sp.xxl),
             FilledButton(
