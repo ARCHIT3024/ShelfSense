@@ -55,3 +55,6 @@ ml/**/runs/
 # Embedder training venv / scratch (ml/embedder)
 ml/embedder/.venv/
 ml/embedder/_int8_candidate.tflite
+
+# built APKs for hand-off (keep out of git; attach to the submission instead)
+dist/
