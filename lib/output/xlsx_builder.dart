@@ -23,10 +23,9 @@ import '../domain/models/models.dart';
 
 const _tag = 'XlsxBuilder';
 
-// NOTE (T-08 licence check): syncfusion_flutter_xlsio 34.2.7 has no
-// registerLicense API — community licence is free for <$1M revenue, <5 devs.
-// Sign up at https://www.syncfusion.com/products/communitylicense and add to
-// ATTRIBUTION.md. Open the first export on-device to confirm no watermark.
+// Licence: used under the Syncfusion Community Licence, registered by Archit
+// on 12 Sep 2026 (see ATTRIBUTION.md). xlsio 34.2.7 has no registerLicense
+// API; generated files were checked and carry no watermark text.
 
 // Design tokens (mirror AppColors in theme.dart)
 const _kHeaderBg    = '#1A237E';

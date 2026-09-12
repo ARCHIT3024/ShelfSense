@@ -29,11 +29,11 @@ Open-source packages and models used, per the event rules' attribution requireme
 
 `syncfusion_flutter_xlsio` is a commercial package. It is used here under the **Syncfusion
 Community Licence Program** (free for organisations with <5 developers and <$1M gross annual
-revenue — https://www.syncfusion.com/products/communitylicense). Registration on Syncfusion's
-site is a legal/account requirement independent of any in-code licence key: the installed package
-version (34.2.7) exposes no `registerLicense` API to call. Verify no trial watermark appears on a
-real generated `.xlsx` before the demo; if one does, fall back to the `excel` package or CSV + PDF
-only (see `docs/Work Flow.md` §9, risk register).
+revenue — https://www.syncfusion.com/products/communitylicense). **Registered by Archit
+Khandelwal on 12 Sep 2026.** Registration is an account-level requirement independent of any
+in-code licence key: the installed package version (34.2.7) exposes no `registerLicense` API.
+A generated `.xlsx` was inspected (every XML part) on 12 Sep and contains no trial or watermark
+text.
 
 ## Team
 

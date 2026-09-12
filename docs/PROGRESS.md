@@ -12,24 +12,10 @@ actually in.**
 
 ---
 
-## ⚠️ Compliance gaps still open
+## Compliance
 
-1. **Syncfusion Community Licence** — **watermark check done 12 Sep 18:25: an XLSX produced by
-   `buildOrderXlsxBytes()` contains no Syncfusion/trial/licence text in any XML part**, so this is
-   purely the legal registration (an account sign-up at
-   https://www.syncfusion.com/products/communitylicense, not an in-code key — verified this
-   session that `syncfusion_flutter_xlsio` 34.2.7 has no `registerLicense` API) has not been
-   confirmed done by a human. Do this before the first real export, not at 06:00. See
-   `ATTRIBUTION.md` and `lib/output/xlsx_builder.dart` for the full note.
-2. ~~APK-on-device not yet verified.~~ **Resolved 12 Sep ~16:08:** release APK built, clean-installed
-   on the iQOO 15 (`I2501`, Android 16), cold-started, and Load Demo Beat → seeded store list
-   verified on-device. See "Release build notes" below for the Gradle fixes that were needed.
-
-Resolved this session: git repo now exists and is pushed (was previously entirely missing —
-see git log for the initial commit), `ATTRIBUTION.md` now exists, and a real compile error in
-`capture_screen.dart` (missing drift `Value` import) was fixed.
-
----
+All clear as of 12 Sep 20:05. Syncfusion Community Licence registered by Archit (12 Sep 2026);
+generated XLSX verified free of watermark text; release APK verified on the physical iQOO 15.
 
 ## Release build notes (12 Sep, G2) — read before touching `android/`
 
