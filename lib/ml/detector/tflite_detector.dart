@@ -43,6 +43,7 @@ class DetectorConfig {
 class DetectorInfo {
   const DetectorInfo({
     required this.inputSize,
+    required this.inputNchw,
     required this.inputType,
     required this.outputShape,
     required this.outputType,
@@ -53,6 +54,7 @@ class DetectorInfo {
     required this.loadMs,
   });
   final int inputSize;
+  final bool inputNchw;
   final TensorType inputType;
   final List<int> outputShape;
   final TensorType outputType;
@@ -63,7 +65,7 @@ class DetectorInfo {
 
   @override
   String toString() =>
-      'in ${inputSize}x$inputSize $inputType · out $outputShape $outputType '
+      'in ${inputSize}x$inputSize ${inputNchw ? 'NCHW' : 'NHWC'} $inputType · out $outputShape $outputType '
       '($layout, $channels ch × $anchors anchors) · $delegate · load ${loadMs}ms';
 }
 
@@ -91,6 +93,7 @@ class TfliteDetector implements DetectorService {
   Tensor? _inT, _outT;
 
   DetectorInfo? get info => _info;
+  @override
   bool get isLoaded => _interpreter != null;
 
   /// Mean latency of the last few runs, for the Diagnostics card.
@@ -141,6 +144,12 @@ class TfliteDetector implements DetectorService {
     if (interp == null) {
       return const Err(DetectorNotLoaded());
     }
+    // The GPU delegate can "succeed" at creation yet be dropped at prepare
+    // time (per-channel INT8 is unsupported); the tflite runtime logs that
+    // itself. Label honestly: INT8 models run on XNNPACK/CPU.
+    if (delegateName == 'gpu' && loadedAsset!.contains('int8')) {
+      delegateName = 'xnnpack (gpu rejected int8)';
+    }
     AppLogger.i(_tag, 'Using $loadedAsset');
 
     // ---- Dump + assert the tensor contract before anything else --------
@@ -156,8 +165,15 @@ class TfliteDetector implements DetectorService {
       final inT = inputs.single;
       final outT = outputs.single;
       final ish = inT.shape;
-      if (ish.length != 4 || ish[0] != 1 || ish[3] != 3 || ish[1] != ish[2]) {
-        throw StateError('input must be [1,S,S,3] NHWC, got $ish');
+      // TF-style export gives NHWC [1,S,S,3]; the LiteRT/ai-edge-torch path
+      // keeps PyTorch's NCHW [1,3,S,S]. Accept both, remember which.
+      final bool nchw;
+      if (ish.length == 4 && ish[0] == 1 && ish[3] == 3 && ish[1] == ish[2]) {
+        nchw = false;
+      } else if (ish.length == 4 && ish[0] == 1 && ish[1] == 3 && ish[2] == ish[3]) {
+        nchw = true;
+      } else {
+        throw StateError('input must be [1,S,S,3] or [1,3,S,S], got $ish');
       }
       final osh = outT.shape;
       if (osh.length != 3 || osh[0] != 1) {
@@ -184,7 +200,8 @@ class TfliteDetector implements DetectorService {
       _outT = outT;
       _isolate = await IsolateInterpreter.create(address: interp.address);
       _info = DetectorInfo(
-        inputSize: ish[1],
+        inputSize: nchw ? ish[2] : ish[1],
+        inputNchw: nchw,
         inputType: inT.type,
         outputShape: osh,
         outputType: outT.type,
@@ -219,6 +236,7 @@ class TfliteDetector implements DetectorService {
         _PreJob(
           path: imagePath,
           size: info.inputSize,
+          nchw: info.inputNchw,
           quantise: inT.type != TensorType.float32,
           signed: inT.type == TensorType.int8,
           scale: inT.params.scale,
@@ -230,10 +248,13 @@ class TfliteDetector implements DetectorService {
       final outLen = info.channels * info.anchors;
       final Object input;
       final Object output;
+      final inShape = info.inputNchw
+          ? [1, 3, info.inputSize, info.inputSize]
+          : [1, info.inputSize, info.inputSize, 3];
       if (inT.type == TensorType.float32) {
-        input = pre.floats!.reshape([1, info.inputSize, info.inputSize, 3]);
+        input = pre.floats!.reshape(inShape);
       } else {
-        input = pre.bytes!.reshape([1, info.inputSize, info.inputSize, 3]);
+        input = pre.bytes!.reshape(inShape);
       }
       if (outT.type == TensorType.float32) {
         output = Float32List(outLen).reshape(info.outputShape);
@@ -307,6 +328,7 @@ class _PreJob {
   const _PreJob({
     required this.path,
     required this.size,
+    required this.nchw,
     required this.quantise,
     required this.signed,
     required this.scale,
@@ -314,7 +336,7 @@ class _PreJob {
   });
   final String path;
   final int size;
-  final bool quantise, signed;
+  final bool nchw, quantise, signed;
   final double scale;
   final int zeroPoint;
 }
@@ -352,13 +374,17 @@ Future<_PreResult> _preprocess(_PreJob job) async {
       dstX: lb.padX.round(), dstY: lb.padY.round());
 
   final n = job.size * job.size * 3;
+  final plane = job.size * job.size;
+  // NHWC interleaves rgb per pixel; NCHW writes three planes.
+  int idx(int px, int ch) => job.nchw ? ch * plane + px : px * 3 + ch;
   if (!job.quantise) {
     final out = Float32List(n);
-    var i = 0;
+    var px = 0;
     for (final p in canvas) {
-      out[i++] = p.r / 255.0;
-      out[i++] = p.g / 255.0;
-      out[i++] = p.b / 255.0;
+      out[idx(px, 0)] = p.r / 255.0;
+      out[idx(px, 1)] = p.g / 255.0;
+      out[idx(px, 2)] = p.b / 255.0;
+      px++;
     }
     return _PreResult(
         letterbox: lb,
@@ -370,12 +396,13 @@ Future<_PreResult> _preprocess(_PreJob job) async {
   final inv = 1.0 / job.scale;
   final lo = job.signed ? -128 : 0, hi = job.signed ? 127 : 255;
   final out = job.signed ? Int8List(n) : Uint8List(n);
-  var i = 0;
+  var px = 0;
   int q(int v) => (((v / 255.0) * inv).round() + job.zeroPoint).clamp(lo, hi);
   for (final p in canvas) {
-    out[i++] = q(p.r.toInt());
-    out[i++] = q(p.g.toInt());
-    out[i++] = q(p.b.toInt());
+    out[idx(px, 0)] = q(p.r.toInt());
+    out[idx(px, 1)] = q(p.g.toInt());
+    out[idx(px, 2)] = q(p.b.toInt());
+    px++;
   }
   return _PreResult(
       letterbox: lb,

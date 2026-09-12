@@ -1,0 +1,7 @@
+path: datasets/SKU-110K/yolo/subset
+
+train: train.txt
+val: val.txt
+
+names:
+  0: object

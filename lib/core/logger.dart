@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Lightweight structured logger. In release builds only errors emit.
+/// Lightweight structured logger. Debug lines are dropped in release.
 /// Surface to /diagnostics; never phones home.
 enum LogLevel { debug, info, warn, error }
 
@@ -23,7 +23,9 @@ class AppLogger {
     );
     _logs.add(entry);
     if (_logs.length > _maxEntries) _logs.removeAt(0);
-    if (kDebugMode || level == LogLevel.error) {
+    // Info+ always reaches logcat: the on-device model/latency numbers are
+    // read from there (T-17) and release is the only build we run.
+    if (kDebugMode || level != LogLevel.debug) {
       debugPrint('[${entry.levelChar}] [$tag] $msg');
     }
   }

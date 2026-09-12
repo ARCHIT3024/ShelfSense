@@ -1,0 +1,8 @@
+path: datasets/SKU-110K/yolo
+
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: object
