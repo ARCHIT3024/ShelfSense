@@ -17,6 +17,9 @@ import '../../core/result.dart';
 import '../../domain/models/models.dart';
 
 abstract class DetectorService {
+  /// True once [load] succeeded; callers skip detection (manual boxes)
+  /// rather than wait when this is false.
+  bool get isLoaded;
   Future<Result<void, Failure>> load();
   Future<Result<List<RawBox>, Failure>> detect(String imagePath);
 }

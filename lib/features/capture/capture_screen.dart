@@ -161,7 +161,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final detector = ref.read(detectorProvider);
     final t0 = DateTime.now().millisecondsSinceEpoch;
     var boxes = const <RawBox>[];
-    if (detector != null) {
+    if (detector != null && detector.isLoaded) {
       switch (await detector.detect(imagePath)) {
         case Ok(:final value):
           boxes = value;
@@ -190,7 +190,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     await (db.update(db.visitPhotos)
           ..where((t) => t.id.equals(photoId)))
         .write(VisitPhotosCompanion(
-            detectLatencyMs: Value(detector == null ? null : latencyMs)));
+            detectLatencyMs:
+                Value(detector != null && detector.isLoaded ? latencyMs : null)));
   }
 
   @override

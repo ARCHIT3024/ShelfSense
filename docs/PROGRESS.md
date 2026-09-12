@@ -5,7 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~18:50 IST (end of R2). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~20:40 IST (G3). Tag `L0` = 0ed84fc. Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -62,6 +62,20 @@ Bugs fixed in that pass: order XLSX header/filename used placeholder `STORE`/`St
 `/review` overshot the viewport; `/shelf` rows collapsed (Row+stretch in a list).
 
 Still stubs, deliberately unreachable from the UI: `/diagnostics`, `/benchmark` (L3).
+
+## Detector integration (T-13 done in code, waiting on T-12's model)
+
+`lib/ml/detector/tflite_detector.dart` implements `DetectorService`; `yolo_decode.dart` holds
+the pure letterbox/decode/NMS (unit-tested, `test/ml/`). `detectorProvider` creates it and
+`main.dart` starts `load()` in the background at app start.
+
+**For A — to go live, drop `detector_int8.tflite` into `assets/models/` and rebuild. Nothing else.**
+On load it logs every tensor (`adb logcat -s flutter | grep TfliteDetector`) and asserts:
+input `[1,S,S,3]` NHWC (float32 0–1 **or** int8/uint8 — quantisation params are read from the
+tensor), output `[1,4+nc,N]` or `[1,N,4+nc]` (both handled), xywh in input pixels **or** normalised
+0–1 (auto-detected). Delegate order GPU → XNNPACK → CPU. If the contract check fails the app logs
+the reason and stays in manual-box mode — it never crashes. Thresholds come from
+`thresholds.dart` via `DetectorConfig` (Diagnostics sliders should write there, T-25).
 
 ## Repo / git state
 

@@ -41,8 +41,22 @@ void main() async {
   );
 }
 
-class ShelfSenseApp extends StatelessWidget {
+class ShelfSenseApp extends ConsumerStatefulWidget {
   const ShelfSenseApp({super.key});
+
+  @override
+  ConsumerState<ShelfSenseApp> createState() => _ShelfSenseAppState();
+}
+
+class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Models load lazily and independently (TRD §4.3): start the detector
+    // now so the first shutter press finds it ready, but never block the
+    // UI or the app start on it. A missing/invalid model just logs.
+    ref.read(detectorProvider)?.load();
+  }
 
   @override
   Widget build(BuildContext context) {
