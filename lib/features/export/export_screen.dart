@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -236,6 +237,8 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           ? '${visits.first.beatName} · ${visits.first.storeName}'
           : '${visits.first.beatName} · ${visits.length} visits';
       await SharePlus.instance.share(ShareParams(files: files, text: label));
+      // Whole-beat generation ends on the handover screen (06_APP_FLOW).
+      if (pdf && xlsx && csv && mounted) context.push('/handover');
     } catch (e) {
       AppLogger.e(_tag, 'Share failed', e);
       if (mounted) {
@@ -251,7 +254,16 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   Widget build(BuildContext context) {
     final async = ref.watch(_beatExportProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Export beat')),
+      appBar: AppBar(
+        title: const Text('Export beat'),
+        actions: [
+          IconButton(
+            tooltip: 'Handover',
+            icon: const Icon(Icons.wifi_tethering),
+            onPressed: () => context.push('/handover'),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)),

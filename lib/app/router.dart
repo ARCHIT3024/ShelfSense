@@ -9,6 +9,7 @@ import '../features/shelf_report/shelf_report_screen.dart';
 import '../features/order/order_screen.dart';
 import '../features/enrolment/enrolment_screen.dart';
 import '../features/export/export_screen.dart';
+import '../features/handover/handover_screen.dart';
 import '../features/benchmark/benchmark_screen.dart';
 import '../features/diagnostics/diagnostics_screen.dart';
 
@@ -61,6 +62,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/export',
       builder: (_, __) => const ExportScreen(),
+    ),
+    GoRoute(
+      path: '/handover',
+      builder: (_, _) => const HandoverScreen(),
     ),
     GoRoute(
       path: '/benchmark',
