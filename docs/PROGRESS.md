@@ -5,10 +5,40 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~23:35 IST (R3). Tag `L0` = 0ed84fc. Detector live. Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
-feature freeze. **This means we are inside the live build window — check the clock against
-`docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
-actually in.**
+Last updated: 2026-09-13, ~02:15 IST (G4). Event: iQOO City Battle Chennai, build window
+Sat 12 Sep 11:00 → Sun 13 Sep **06:30 hard feature freeze**. Tags: `L0` = 0ed84fc,
+`L0.5-detector` = 2ba1c23, `L1` = 25e99a6.
+
+## Status at a glance (13 Sep 02:15)
+
+| Level | Ships | On device |
+|---|---|---|
+| **L0** | capture → boxes → tag → planogram diff → order → XLSX + CSV → share | ✅ tagged `L0` |
+| **Detector** | YOLO11n INT8 Pack Finder, GPU delegate | ✅ tagged `L0.5-detector` — 32 ms infer, ~350 ms with preprocess |
+| **L1** | `/enrol` (8-shot coverage grid) → MobileNetV3 fp16 embedder → `SkuIndex` cosine kNN → green/amber/blue on `/review`, ranked picker, live "Test it now" | ✅ tagged `L1` — 3/3 Red Bull at 0.77–0.87 cosine, 763 ms shutter-to-recognised; 13 SKUs / 111 vectors enrolled from the test set |
+| **L2** | beat-summary PDF (`pdf`), deterministic visit record + rationale persisted on confirm (`llm_model_id = null`) | ✅ · voice → ASR → LLM **not started, cut** (PRD F-21 fallback covers every field) |
+| **L3** | `/handover` Wi-Fi server + QR (`shelf`), `/diagnostics` (model cards, runtime threshold sliders, reset demo data, export enrolment shots, dump logs) | ✅ built; handover not yet hit from a second machine · OCR tie-break **in progress** (separate branch) · `/benchmark` **not built** (no T-21 baseline) |
+| Also live | `/store` pre-visit brief, `/shelf` table, `/order` + Add line / override bar / long-press qty, `/export` per-visit + Generate all, live `/beat` pills from a DB stream, push navigation with working system back | ✅ |
+
+`flutter analyze`: 0 errors (≈26 infos/warnings, hygiene pass on a separate branch). `flutter test`: **113/113**.
+Release APK ≈ 124 MB with both models. Full demo path last run on the phone 13 Sep 01:44.
+
+## What is left before 06:30 (excluding cloud benchmark, physical packs, deck)
+
+1. **Bug bash (T-31 / A-07, A-08)** — 10 consecutive full runs in aeroplane mode, zero crashes.
+   Not yet done; needs a human on the shutter.
+2. **A-01 / A-10** — cold start ≤ 3 s, peak RSS ≤ 1.5 GB during detection: measure with
+   `adb shell am start -W` and `dumpsys meminfo`.
+3. **Handover from a laptop** — `/export → Handover → Serve on Wi-Fi`, then
+   `curl http://<phone-ip>:8080/` from a laptop on the same hotspot (F-24).
+4. **Merge** OCR tie-break, `/catalogue` + lint hygiene, docs branches when they report.
+5. **T-32** — `flutter build apk --release --split-per-abi`, clean install, tag `demo`, submit early.
+6. **Reset demo data** on `/diagnostics` after the last rehearsal, before judges.
+
+Physical-world items (owner: A/C, morning): buy 20–30 real packs, enrol them in `/enrol`,
+`/diagnostics → Export enrolment shots`, retrain with `ml/embedder/train_embedder.py`, re-export,
+rebuild. 12 of the 13 enrolled SKUs today are photographs of a laptop screen — see
+`ml/embedder/README.md`. Cloud baseline (T-21) and the deck (T-27) are outside this file's scope.
 
 ---
 
@@ -81,7 +111,7 @@ Three things had to change to get here, all committed:
    `libLiteRt.so` with a different API and the FFI can't bind it. Inference runs on the main isolate
    (32 ms, behind the shutter overlay). `kDetMaxBoxes` raised 100 → 300.
 
-## Embedder integration (T-20 done in code, waiting on T-14's model)
+## Embedder integration (T-20; model live since 13 Sep 01:41)
 
 `lib/ml/embedder/tflite_embedder.dart` implements `EmbedderService`; `sku_index.dart` holds the
 in-memory index, pure cosine ranking (`rankCandidates`) and threshold routing (`routeScore`),
@@ -89,8 +119,10 @@ unit-tested in `test/ml/sku_index_test.dart`. `embedderProvider` / `skuIndexProv
 `di.dart`; `main.dart` loads the embedder in the background, back-fills embeddings for every
 enrolment shot already on disk, then loads the index.
 
-**For A — to go live, drop `embedder_int8.tflite` (or `_fp16` / `_fp32`) into `assets/models/`
-and rebuild. Nothing else.** Contract: input `[1,224,224,3]` NHWC or `[1,3,224,224]` NCHW, float32
+**Live:** `assets/models/embedder_fp16.tflite` (MobileNetV3-Small + 128-d head, trained on
+`ml/embedder/crops/`, see `ml/embedder/README.md`). GPU delegate, 0.9 s load, ~2 ms per crop;
+start-up back-fill embedded 111 shots over 16 SKUs in 3.5 s. To replace it, drop a new
+`embedder_int8/_fp16/_fp32.tflite` into `assets/models/` and rebuild — nothing else.** Contract: input `[1,224,224,3]` NHWC or `[1,3,224,224]` NCHW, float32
 or int8/uint8 (quantisation params read from the tensor), ImageNet mean/std normalisation applied
 in-app; output `[1,D]` float32 or quantised — 128-d expected, any D accepted, L2-normalised again
 in-app. Verify with `adb logcat -s flutter | grep -E "TfliteEmbedder|SkuIndex"`: the tensor dump,
@@ -111,7 +143,7 @@ for the same reasons as the detector.
 the pure letterbox/decode/NMS (unit-tested, `test/ml/`). `detectorProvider` creates it and
 `main.dart` starts `load()` in the background at app start.
 
-**For A — to go live, drop `detector_int8.tflite` into `assets/models/` and rebuild. Nothing else.**
+**To replace the model, drop a new `detector_int8/_fp16/_fp32.tflite` into `assets/models/` and rebuild. Nothing else.**
 On load it logs every tensor (`adb logcat -s flutter | grep TfliteDetector`) and asserts:
 input `[1,S,S,3]` NHWC (float32 0–1 **or** int8/uint8 — quantisation params are read from the
 tensor), output `[1,4+nc,N]` or `[1,N,4+nc]` (both handled), xywh in input pixels **or** normalised
@@ -122,99 +154,46 @@ the reason and stays in manual-box mode — it never crashes. Thresholds come fr
 ## Repo / git state
 
 - Remote: `https://github.com/ARCHIT3024/ShelfSense.git`, branch `main`.
-- Repo was empty (no commits) before this session's first push — consistent with the "empty repo
-  at kickoff" rule, since the actual `git init` just happened to run late (this session), not at
-  11:00 sharp. If judges or organisers ask, the honest framing is "written across the build window
-  in the same working copy; git history starts partway through because we didn't `git init`
-  in the first 15 minutes as T-00 calls for."
-- **Give both other teammates' laptops write access / have them clone now** — T-00's stated exit
-  criterion ("all 3 can push") is not yet independently confirmed.
+- Repo was empty (no commits) before the first push at ~15:30 on 12 Sep — the actual `git init`
+  ran late, not at 11:00 sharp. If judges or organisers ask, the honest framing is "written across
+  the build window in the same working copy; git history starts partway through because we didn't
+  `git init` in the first 15 minutes as T-00 calls for."
+- All three teammates have pushed to `main` (A: `ml/pack_finder`, models; C: `lib/output`,
+  `lib/domain/services`, `/order`; B: everything else). Sub-agent work lands via merged
+  `worktree-agent-*` branches.
+- Tags: `L0`, `L0.5-detector`, `L1`. `demo` is applied at the 06:30 freeze (T-32).
 
 ---
 
-## What exists right now (verified by reading the files, not by memory)
+## Task-ID history (what each plan task became)
 
-Project: Flutter app `shelfsense` at repo root. `pubspec.yaml` has all planned packages added and
-resolved (`flutter pub get` succeeds). `flutter analyze` reports **zero errors** — only lint-level
-info/warnings (unused imports, deprecated `withOpacity`, a couple of unused fields/locals in
-`capture_screen.dart`/`beat_screen.dart`/`database.dart`/`models.dart` — safe to ignore or clean up
-opportunistically, none block a build). `android/app` applicationId is `com.shelfsense.app`. No
-`build/` directory yet in this working copy — **actual on-device install still needs verifying by
-whoever has the phone (see compliance gaps above).**
+| Task | Outcome |
+|---|---|
+| T-03/T-04/T-05 | Flutter project, theme tokens, drift schema (14 tables), seed loader, `/beat` + `/store` — done 12 Sep G1 |
+| T-06 | `/capture` still capture; release APK cold-started on the iQOO 15 12 Sep 16:08 |
+| T-08 (C) | `xlsx_builder` (Syncfusion, styled, totals, override tint) + `csv_builder` (RFC 4180); 30 tests |
+| T-15 (B) | `/review` — zoom/pan, colour-coded boxes, picker with ranked candidates, draw/resize/delete, override events |
+| T-18 (C + B) | `FacingCounter`, `PlanogramDiff`, `/shelf` table; shared `shelf_facts_pipeline.dart` feeds `/shelf` and `/order` |
+| T-19 (C) | `/order` — `OrderProvider` (AsyncNotifier), steppers by case, confirm → order_lines + files; later + Add line, override bar, long-press qty |
+| T-22 (B) | `/enrol` — 3 steps, 8-slot coverage grid, guide-square crop, hands the box back to `/review` tagged |
+| T-12/T-13 (A + B) | `detector_int8.tflite` (mAP50 0.889 test) + `TfliteDetector`; NCHW input, raw byte I/O, main-isolate inference, LiteRT 1.4.2 |
+| T-14/T-20 (A + B) | `embedder_fp16.tflite` (100 % held-out NN on 26 crops) + `TfliteEmbedder`, `InMemorySkuIndex`, pipeline auto-match, start-up back-fill |
+| T-28 (C) | `ReorderEngine` (TRD §5.4), 21 tests; deterministic visit record on confirm |
+| T-29 (C, LLM-free half) | `pdf_builder` beat summary; ASR/LLM cut |
+| T-30 (C) | `/handover` server + QR; OCR tie-break in progress; `/benchmark` not built |
+| T-25 tooling (B) | `/diagnostics` — model cards, `RuntimeThresholds` persisted to `app_settings`, danger zone |
 
-### Done — maps to task IDs in `03_IMPLEMENTATION_PLAN.md`
+Resolved decisions: `lib/output/` is the export directory (not `lib/export/`); `final_qty` is in
+**units**, steppers move by `case_size`; `ShelfFact.skuName/skuCode` are joined in
+`shelf_facts_pipeline.dart`; low-confidence embedder matches keep their candidate `sku_id` for the
+amber chip but are **not** counted as facings (TRD §5.1).
 
-| Task | What | Evidence |
-|---|---|---|
-| **T-03** | `flutter create` done, all packages added, portrait lock + status bar styling in `main.dart`, theme tokens built | `lib/main.dart`, `lib/app/theme.dart` (`AppColors`/`AppText`/`Sp` tokens used everywhere downstream) |
-| **T-04** | Full drift schema — all 11 tables from `05_DATA_SCHEMA.md`, code-gen'd, seed loader | `lib/data/db/tables/*.dart`, `lib/data/db/database.dart` + generated `database.g.dart` (build_runner already run), `lib/data/seed/seed_data.dart` reading `assets/seed/seed_*.json` |
-| **T-05 (partial)** | `/beat` and `/store/:storeId` routes wired and screens built against seeded data | `lib/app/router.dart`, `lib/features/beat/beat_screen.dart`, `lib/features/store/store_screen.dart` — both read live from `dbProvider`. No `/boot` splash route exists; router's `initialLocation` is `/beat` directly. |
-| **T-06** | `/capture/:visitId` — camera still-capture screen built; **release APK installed and cold-started on the physical iQOO 15 (12 Sep 16:08)** | `lib/features/capture/capture_screen.dart`; build fixes in `android/` (see "Release build notes"). Camera screen itself not yet exercised on-device — that's T-10. |
-| **T-08 (C — complete)** | `xlsx_builder.dart` — production XLSX with styled headers, totals, freeze pane, override highlighting. `buildOrderXlsxBytes()` in-memory API for tests. 9 unit tests passing. | `lib/output/xlsx_builder.dart`, `test/output/xlsx_builder_test.dart`. Committed `3ad1342`. **⚠️ Still need on-device watermark check — run `writeHelloWorldXlsx()` on iQOO 15 before trusting real exports.** |
-| **T-08 (C — complete)** | `csv_builder.dart` — RFC 4180 with CRLF, UTF-8 BOM, field quoting. `buildOrderCsvBytes()` in-memory API. 21 unit tests passing. | `lib/output/csv_builder.dart`, `test/output/csv_builder_test.dart`. Committed `021fc8f`. |
-| **T-18 (C — complete)** | `facing_counter.dart` — counts facings per SKU from `MatchedBox` list, excludes gaps, tallies unknowns, returns unmodifiable `FacingCount`. 11 tests. | `lib/domain/services/facing_counter.dart`, `test/domain/facing_counter_test.dart`. |
-| **T-18 (C — complete)** | `planogram_diff.dart` — diffs counted vs target facings → `List<ShelfFact>` with in_stock / below_plan / stockout / unlisted. UUID per fact, visitId + computedAt propagated. 12 tests. | `lib/domain/services/planogram_diff.dart`, `test/domain/planogram_diff_test.dart`. |
-| **T-28 prep (C — partial)** | `reorder_engine.dart` — `suggest()` with TRD §5.4 formula: trailing history floor, whole-case rounding, absurd-qty cap, stockout-first sort. `medianOrZero()` helper exposed. 21 tests. Awaiting T-19 wiring and `value_paise` unit clarification with B. | `lib/domain/services/reorder_engine.dart`, `test/domain/reorder_engine_test.dart`. |
-| **T-15** | `/review` — full implementation, verified on the iQOO 15 (12 Sep ~16:27): pinch-zoom/pan, boxes colour-coded by state with staggered reveal, pulsing unmatched, chips auto-hide when small, tap → SKU picker sheet (crop thumb, ranked candidates slot, search, **Enrol this pack** → `/enrol` with a cropped JPEG), long-press → resize/delete, resize mode with corner handles + move, long-press-drag on empty area draws a new box, summary banner with expandable untagged list that zooms to each box, `Continue (N untagged)`. Every correction writes `override_events` + `was_corrected`. | `lib/features/review/{review_screen,review_repository,sku_picker_sheet,crop_util}.dart`. Candidate ranking (`RankedSku`) is wired but empty until T-20's embedder exists. `/enrol` receives `extra: {cropPath, detectionId}`. |
-| **T-22** | `/enrol` — 3-step flow verified on the iQOO 15 (12 Sep ~16:40) end-to-end from `/review`: Enrol this pack → step 1 (crop preloaded as shot 1; New SKU form with name/grammage/unit + collapsible brand/variant/MRP/case, or Existing SKU search) → step 2 (8-slot bright/dim/angled/occluded coverage grid with auto-advance, live preview with a pack guide, shutter crops to the guide, long-press a slot to delete) → step 3 (status summary, Add more shots, Done). Done tags the originating `/review` box with the new SKU and pops back; the box goes green immediately. | `lib/features/enrolment/{enrolment_screen,enrolment_repository,enrol_camera}.dart`. **Shots are stored as crops on disk (`<docs>/enrol/<skuId>/<ms>_<context>.jpg`); `sku_embeddings` rows are only written when `embedderProvider` (in `di.dart`, currently `null`) is non-null.** T-20 must (a) provide the `EmbedderService` there and (b) call `EnrolmentRepository.backfillPendingEmbeddings()` once after load so pre-model shots become recognisable. "Test it now" re-run against the last shelf photo is not implemented — it needs detector + embedder. Crop-to-guide should become crop-to-largest-detected-box once T-13 lands (`enrol_camera.dart` `_kGuideFrac`). |
-| Support infra | Result/failure types, ids, structured logger, DI providers | `lib/core/result.dart`, `lib/core/failures.dart`, `lib/core/ids.dart`, `lib/core/logger.dart`, `lib/app/di.dart` |
-| ML threshold constants | Single source of truth for detector conf/IoU, matcher accept/reject bands, enrolment shot targets, gap-detection area | `lib/ml/common/thresholds.dart` |
-| Domain models | `lib/domain/models/models.dart` | |
-| Interface scaffolds for the ML pipeline | Abstract service classes (no implementation — no models exist yet) so the intended shape is committed and each owner has a typed starting point | `lib/ml/detector/detector_service.dart` (T-12/13), `lib/ml/embedder/embedder_service.dart` (T-14/20), `lib/ml/ocr/ocr_service.dart` (T-30), `lib/ml/llm/llm_service.dart` (T-23/26), `lib/ml/asr/asr_service.dart` (T-29), `lib/output/pdf_builder.dart` (T-29) |
-
-### ⚠️ Open decisions (C must resolve before T-19 wiring)
-
-1. **`lib/output/` vs `lib/export/`** — TRD §3 says `lib/export/`; B created `lib/output/` and all existing imports point there. Team must agree and rename consistently. Do not split between directories.
-2. **`value_paise` unit convention** — DATA_SCHEMA §10: `final_qty × mrp_paise × (case_size if unit=case)`. ReorderEngine currently stores qty in units (e.g., 12 = one case). If B's DB write treats `final_qty` as number of *cases*, the formula must change. Confirm with B before T-19 writes to `order_lines`.
-3. **`skuName`/`skuCode` in ShelfFact** — PlanogramDiff leaves these null. The T-19 Riverpod provider must join with the SKU catalogue before passing `ShelfFact` to the XLSX builder so human-readable columns appear in the export.
-
-
-### Scaffolded but not implemented (stub screens, each literally says what's next)
-
-- `lib/features/order/order_screen.dart` → **T-19** (steppers + wiring to `xlsx_builder`/`csv_builder`)
-- `lib/features/export/export_screen.dart` → beat export done (XLSX/CSV); PDF (**T-29**) + local HTTP handover (**T-30**) still to add
-- `lib/features/diagnostics/diagnostics_screen.dart` → threshold sliders, ties to **T-25**
-- `lib/features/benchmark/benchmark_screen.dart` → **T-30/T-21** (on-device vs cloud comparison)
-
-### Interfaces exist, implementations don't (no models trained/exported yet)
-
-- `lib/ml/detector/` — `DetectorService` interface only. **T-12/T-13**: no `.tflite` model, no decode/NMS logic.
-- `lib/ml/embedder/` — service + index implemented (T-20); **T-14** model file still missing.
-- `lib/ml/ocr/` — `OcrService` interface only. **T-30**: expected — L3 item, strictly time-boxed.
-- `lib/ml/llm/` — `LlmService` interface only. **T-23/T-26**: no `flutter_gemma` wiring yet.
-- `lib/ml/asr/` — `AsrService` interface only. **T-29**: expected — L2 item.
-- `lib/output/pdf_builder.dart` — interface only, deliberately not implemented yet since it depends on `LlmService`'s `VisitRecord` output existing first.
-- `assets/models/` — still empty, no detector/embedder `.tflite` files dropped in yet.
-- `assets/benchmark/eval_set/` — still empty, no eval images or `cloud_baseline.json` yet (**T-21**).
-
-### Physical/off-repo tasks — status unknown from files, ask directly on resume
-
-- **T-01/T-02** (Model lead, A): SKU-110K download + YOLO11n training launch — can't be verified from this filesystem; ask whether it was started on A's laptop.
-- **T-07**: demo shelf / FMCG packs purchased — physical task, ask.
-- **T-09/T-11**: training monitored from phone, enrolment photo set shot — physical/phone task, ask.
-
----
-
-## Immediate next steps (in priority order)
-
-1. Confirm current wall-clock time against `Work Flow.md` §2/§6 to know which block (G1/R1/G2…)
-   we're actually in, and re-plan accordingly — the schedule is time-boxed, not sequence-boxed.
-2. Get the Syncfusion Community Licence account registration done (human task, 5 minutes) and
-   run the `/export` smoke-test button on the physical device to confirm no watermark.
-3. ~~Verify T-06/on-device~~ done. ~~T-15~~ done. ~~T-22~~ done. Next on-device check: open a store → `/capture`, confirm camera
-   preview + shutter work, then the `/export` smoke-test button (Syncfusion watermark check).
-4. Have the other two teammates actually clone `https://github.com/ARCHIT3024/ShelfSense.git` and
-   confirm they can push — T-00's "all 3 can push" exit criterion is still unconfirmed.
-5. Next real feature work: C owns **T-18**/**T-19** (in progress on C's laptop). B is out of
-   model-free tasks: T-16 needs the detector, T-10 (on-phone UX pass of `/capture`) is a phone-block
-   task. Then whichever of T-12/T-13
-   (detector) or T-14/T-20 (embedder) has a trained model ready first.
-
----
+Not built and not planned for the window: voice note / ASR / on-device LLM (`lib/ml/asr`, `lib/ml/llm`
+are interface + deterministic fallback only), `/benchmark` (needs `assets/benchmark/cloud_baseline.json`
+from T-21), `/boot` splash (router starts at `/beat`).
 
 ## How to keep this file useful
 
-Update the "Done" / "Scaffolded" / "Interfaces exist" tables together with the git commit
-trail — whoever finishes a task ID should move its row and note the commit/tag. Keep the
-"Compliance gaps" section empty once those items are actually resolved; don't let it silently go
-stale.
+Update the status table and the "left before 06:30" list together with the git commit trail —
+whoever finishes a task should move its row and note the commit/tag. Keep the build notes and the
+detector/embedder integration sections; they are the answers to "why is the Gradle like that".
