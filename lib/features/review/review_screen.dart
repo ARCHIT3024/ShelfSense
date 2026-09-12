@@ -819,7 +819,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                   Expanded(
                     child: Text.rich(
                       TextSpan(children: [
-                        TextSpan(text: '${counts.packs} packs'),
+                        TextSpan(text: '${counts.packs} pack${counts.packs == 1 ? '' : 's'}'),
                         const TextSpan(text: ' · '),
                         TextSpan(
                           text: '${counts.matched} matched',

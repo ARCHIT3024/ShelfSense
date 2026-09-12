@@ -11,6 +11,8 @@ import '../../app/di.dart';
 import '../../app/theme.dart';
 import '../../core/ids.dart';
 import '../../core/logger.dart';
+import '../../core/result.dart';
+import '../../domain/models/models.dart' show RawBox;
 import '../../data/db/database.dart';
 
 const _tag = 'CaptureScreen';
@@ -115,9 +117,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             capturedAt: start,
           ));
 
-      // 5. Run detection pipeline (stub until tflite model lands in G2)
-      setState(() => _processingStage = 'Recognising…');
-      final result = await _runPipeline(db, widget.visitId, photoId, destPath, w, h);
+      // 5. Detect on the still — never on the preview stream.
+      setState(() => _processingStage = 'Finding packs…');
+      await _runPipeline(db, widget.visitId, photoId, destPath, w, h);
       final latency = DateTime.now().millisecondsSinceEpoch - start;
       AppLogger.i(_tag, 'Pipeline done in ${latency}ms');
 
@@ -151,35 +153,44 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     return (1920, 1080); // fallback
   }
 
-  /// Stub detection pipeline — replaced by real TFLite service in T-13.
-  /// Creates demo bounding boxes so /review can be tested immediately.
+  /// Stage A of the pipeline: detector → one `detections` row per box.
+  /// With no detector loaded (T-12/T-13 pending) nothing is inserted and the
+  /// rep draws boxes on /review — honest, and the loop still demos.
   Future<void> _runPipeline(AppDatabase db, String visitId, String photoId,
       String imagePath, int w, int h) async {
-    // Stub: insert 3 fake boxes so the review screen has something to show.
+    final detector = ref.read(detectorProvider);
+    final t0 = DateTime.now().millisecondsSinceEpoch;
+    var boxes = const <RawBox>[];
+    if (detector != null) {
+      switch (await detector.detect(imagePath)) {
+        case Ok(:final value):
+          boxes = value;
+        case Err(:final failure):
+          AppLogger.e(_tag, 'Detector failed — falling back to manual', failure);
+      }
+    }
+    final latencyMs = DateTime.now().millisecondsSinceEpoch - t0;
+
     final now = DateTime.now().millisecondsSinceEpoch;
-    final fakeBoxes = [
-      (0.05, 0.10, 0.30, 0.45, 0.87), // x1,y1,x2,y2,score
-      (0.35, 0.08, 0.62, 0.50, 0.79),
-      (0.65, 0.12, 0.92, 0.48, 0.72),
-    ];
     await db.batch((b) {
-      for (final box in fakeBoxes) {
+      for (final box in boxes) {
         b.insert(db.detections, DetectionsCompanion.insert(
               id: newId(),
               visitId: visitId,
               photoId: photoId,
-              x1: box.$1,
-              y1: box.$2,
-              x2: box.$3,
-              y2: box.$4,
-              detConfidence: box.$5,
+              x1: box.x1,
+              y1: box.y1,
+              x2: box.x2,
+              y2: box.y2,
+              detConfidence: box.score,
               createdAt: now,
             ));
       }
     });
     await (db.update(db.visitPhotos)
           ..where((t) => t.id.equals(photoId)))
-        .write(VisitPhotosCompanion(detectLatencyMs: const Value(50)));
+        .write(VisitPhotosCompanion(
+            detectLatencyMs: Value(detector == null ? null : latencyMs)));
   }
 
   @override
