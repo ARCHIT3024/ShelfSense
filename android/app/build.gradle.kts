@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.shelfsense.app"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned: the Flutter default (37) only exists in the SDK as the minor-versioned
+    // "android-37.0" package, which AGP cannot resolve from the plain "android-37" hash.
+    // 36 = Android 16, which is what the target iQOO 15 runs.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -20,7 +23,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -30,6 +33,10 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

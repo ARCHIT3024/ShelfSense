@@ -19,6 +19,18 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Force every Flutter plugin module onto compileSdk 36 - see the note in app/build.gradle.kts.
+subprojects {
+    plugins.withId("com.android.library") {
+        extensions.findByName("android")?.let { ext ->
+            ext.javaClass.methods
+                .firstOrNull { it.name == "setCompileSdk" && it.parameterCount == 1 }
+                ?.invoke(ext, 36)
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+

@@ -9,11 +9,30 @@ import '../../core/ids.dart';
 import '../../data/db/database.dart';
 import '../../data/seed/seed_data.dart';
 
-class BeatScreen extends ConsumerWidget {
+class BeatScreen extends ConsumerStatefulWidget {
   const BeatScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BeatScreen> createState() => _BeatScreenState();
+}
+
+class _BeatScreenState extends ConsumerState<BeatScreen> {
+  // Held in state so the FutureBuilder is not handed a fresh future on every
+  // rebuild, and so we can deliberately re-run the query after seeding.
+  late Future<_BeatData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadBeatData(ref.read(dbProvider));
+  }
+
+  void _reload() {
+    setState(() => _future = _loadBeatData(ref.read(dbProvider)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final db = ref.watch(dbProvider);
 
     return Scaffold(
@@ -47,7 +66,7 @@ class BeatScreen extends ConsumerWidget {
         ],
       ),
       body: FutureBuilder(
-        future: _loadBeatData(db),
+        future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -59,8 +78,7 @@ class BeatScreen extends ConsumerWidget {
           if (stores.isEmpty) {
             return _EmptyState(onLoadDemo: () async {
               await runSeed(db);
-              // ignore: use_build_context_synchronously
-              if (context.mounted) (context as Element).markNeedsBuild();
+              if (mounted) _reload();
             });
           }
 

@@ -5,8 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~14:00 (from repo history — confirm actual time on resume and correct
-this line). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~16:10 IST (G2 block). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -20,15 +19,39 @@ actually in.**
    session that `syncfusion_flutter_xlsio` 34.2.7 has no `registerLicense` API) has not been
    confirmed done by a human. Do this before the first real export, not at 06:00. See
    `ATTRIBUTION.md` and `lib/output/xlsx_builder.dart` for the full note.
-2. **APK-on-device not yet verified.** Nothing in the repo proves a debug/release build has
-   actually been installed and cold-started on the physical iQOO 15 (T-06's real exit criterion).
-   Confirm with whoever has the phone.
+2. ~~APK-on-device not yet verified.~~ **Resolved 12 Sep ~16:08:** release APK built, clean-installed
+   on the iQOO 15 (`I2501`, Android 16), cold-started, and Load Demo Beat → seeded store list
+   verified on-device. See "Release build notes" below for the Gradle fixes that were needed.
 
 Resolved this session: git repo now exists and is pushed (was previously entirely missing —
 see git log for the initial commit), `ATTRIBUTION.md` now exists, and a real compile error in
 `capture_screen.dart` (missing drift `Value` import) was fixed.
 
 ---
+
+## Release build notes (12 Sep, G2) — read before touching `android/`
+
+`flutter build apk --release` did **not** work out of the box; four fixes, all committed:
+
+- `android/app/build.gradle.kts`: `compileSdk`/`targetSdk` pinned to **36**. Flutter's default (37)
+  only exists in the SDK as the minor-versioned `android-37.0` package, which AGP 9.0.1 can't
+  resolve from the plain `android-37` hash. `android/build.gradle.kts` forces all plugin modules
+  to 36 as well.
+- `permission_handler` downgraded to `^11.4.0` (its Android module 14.x hard-requires
+  compileSdk 37 via AAR metadata). It isn't used in `lib/` yet — re-check if someone bumps it.
+- `android/gradle.properties`: `kotlin.incremental=false`, `kotlin.compiler.execution.strategy=in-process`
+  (Kotlin 2.3 incremental caches fail with "Storage ... is already registered" on this machine)
+  and `kotlin.jvm.target.validation.mode=warning` (tflite_flutter / mlkit declare Java 11 vs Kotlin 17).
+- `android/app/proguard-rules.pro` (new, wired into `release`): `-dontwarn` for the optional
+  ML Kit script recognisers R8 chokes on, and `-keep` for `com.google.mlkit.**` / TFLite
+  (R8 was stripping ML Kit's no-arg registrar constructors, which would break OCR at runtime).
+
+Build takes ~3.5 min warm. APK ≈ 105 MB. Install: `adb install -r build/app/outputs/flutter-apk/app-release.apk`.
+adb lives at `E:\Android\Sdk\platform-toolsdb.exe` (not on PATH).
+
+Also fixed: `beat_screen.dart` "Load Demo Beat" didn't refresh the list after seeding (the
+FutureBuilder's future was recreated in `build`, and `markNeedsBuild` on the builder context
+never re-ran it). Now a `ConsumerStatefulWidget` holding the future and re-creating it after seed.
 
 ## Repo / git state
 
@@ -60,7 +83,7 @@ whoever has the phone (see compliance gaps above).**
 | **T-03** | `flutter create` done, all packages added, portrait lock + status bar styling in `main.dart`, theme tokens built | `lib/main.dart`, `lib/app/theme.dart` (`AppColors`/`AppText`/`Sp` tokens used everywhere downstream) |
 | **T-04** | Full drift schema — all 11 tables from `05_DATA_SCHEMA.md`, code-gen'd, seed loader | `lib/data/db/tables/*.dart`, `lib/data/db/database.dart` + generated `database.g.dart` (build_runner already run), `lib/data/seed/seed_data.dart` reading `assets/seed/seed_*.json` |
 | **T-05 (partial)** | `/beat` and `/store/:storeId` routes wired and screens built against seeded data | `lib/app/router.dart`, `lib/features/beat/beat_screen.dart`, `lib/features/store/store_screen.dart` — both read live from `dbProvider`. No `/boot` splash route exists; router's `initialLocation` is `/beat` directly. |
-| **T-06 (mostly)** | `/capture/:visitId` — camera still-capture screen substantially built | `lib/features/capture/capture_screen.dart` — fixed a real compile error this session (missing `import 'package:drift/drift.dart' show Value;`) — **still not verified: actually installed/cold-started on the physical iQOO 15** |
+| **T-06** | `/capture/:visitId` — camera still-capture screen built; **release APK installed and cold-started on the physical iQOO 15 (12 Sep 16:08)** | `lib/features/capture/capture_screen.dart`; build fixes in `android/` (see "Release build notes"). Camera screen itself not yet exercised on-device — that's T-10. |
 | **T-08 (scaffold done, real implementation)** | On-device XLSX + CSV writers, not just a scaffold — take `List<OrderLine>` + store/beat metadata, write real files to app storage, return `Result<String, Failure>` | `lib/output/xlsx_builder.dart`, `lib/output/csv_builder.dart`. `writeHelloWorldXlsx()` + a "Write test XLSX + CSV" button wired into `/export` (`lib/features/export/export_screen.dart`) satisfy T-08's exit criterion ("a hello-world .xlsx") — **run it on-device and confirm no Syncfusion trial watermark before trusting real exports.** |
 | Support infra | Result/failure types, ids, structured logger, DI providers | `lib/core/result.dart`, `lib/core/failures.dart`, `lib/core/ids.dart`, `lib/core/logger.dart`, `lib/app/di.dart` |
 | ML threshold constants | Single source of truth for detector conf/IoU, matcher accept/reject bands, enrolment shot targets, gap-detection area | `lib/ml/common/thresholds.dart` |
@@ -102,7 +125,8 @@ whoever has the phone (see compliance gaps above).**
    we're actually in, and re-plan accordingly — the schedule is time-boxed, not sequence-boxed.
 2. Get the Syncfusion Community Licence account registration done (human task, 5 minutes) and
    run the `/export` smoke-test button on the physical device to confirm no watermark.
-3. Verify T-06/on-device: build and install an APK on the iQOO 15, confirm cold start works.
+3. ~~Verify T-06/on-device~~ done. Next on-device check: open a store → `/capture`, confirm camera
+   preview + shutter work, then the `/export` smoke-test button (Syncfusion watermark check).
 4. Have the other two teammates actually clone `https://github.com/ARCHIT3024/ShelfSense.git` and
    confirm they can push — T-00's "all 3 can push" exit criterion is still unconfirmed.
 5. Next real feature work, in roughly this order: **T-19** (wire `order_screen.dart` to the
