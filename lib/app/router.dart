@@ -11,6 +11,7 @@ import '../features/enrolment/enrolment_screen.dart';
 import '../features/export/export_screen.dart';
 import '../features/handover/handover_screen.dart';
 import '../features/benchmark/benchmark_screen.dart';
+import '../features/catalogue/catalogue_screen.dart';
 import '../features/diagnostics/diagnostics_screen.dart';
 
 final appRouter = GoRouter(
@@ -62,6 +63,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/export',
       builder: (_, __) => const ExportScreen(),
+    ),
+    GoRoute(
+      path: '/catalogue',
+      builder: (_, _) => const CatalogueScreen(),
     ),
     GoRoute(
       path: '/handover',

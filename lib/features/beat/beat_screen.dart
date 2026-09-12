@@ -62,6 +62,11 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
             ),
           ),
           IconButton(
+            tooltip: 'Catalogue',
+            icon: const Icon(Icons.inventory_2_outlined),
+            onPressed: () => context.push('/catalogue'),
+          ),
+          IconButton(
             tooltip: 'Diagnostics',
             icon: const Icon(Icons.tune),
             onPressed: () => context.push('/diagnostics'),
