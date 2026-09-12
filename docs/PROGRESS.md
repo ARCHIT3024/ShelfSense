@@ -5,7 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~16:30 IST (start of R2). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~16:45 IST (R2). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -49,6 +49,11 @@ see git log for the initial commit), `ATTRIBUTION.md` now exists, and a real com
 Build takes ~3.5 min warm. APK ≈ 105 MB. Install: `adb install -r build/app/outputs/flutter-apk/app-release.apk`.
 adb lives at `E:\Android\Sdk\platform-toolsdb.exe` (not on PATH).
 
+**Gotchas for anyone writing UI:** theme `FilledButton`/`OutlinedButton` have
+`minimumSize: Size.fromHeight(...)` = infinite width — never place one in a `Row` next to an
+`Expanded`, it eats the row. Drift's row class for the `Skus` table is `SkusData`, not `Sku`
+(`Sku` is the dependency-free domain model in `lib/domain/models`).
+
 Also fixed: `beat_screen.dart` "Load Demo Beat" didn't refresh the list after seeding (the
 FutureBuilder's future was recreated in `build`, and `markNeedsBuild` on the builder context
 never re-ran it). Now a `ConsumerStatefulWidget` holding the future and re-creating it after seed.
@@ -86,6 +91,7 @@ whoever has the phone (see compliance gaps above).**
 | **T-06** | `/capture/:visitId` — camera still-capture screen built; **release APK installed and cold-started on the physical iQOO 15 (12 Sep 16:08)** | `lib/features/capture/capture_screen.dart`; build fixes in `android/` (see "Release build notes"). Camera screen itself not yet exercised on-device — that's T-10. |
 | **T-08 (scaffold done, real implementation)** | On-device XLSX + CSV writers, not just a scaffold — take `List<OrderLine>` + store/beat metadata, write real files to app storage, return `Result<String, Failure>` | `lib/output/xlsx_builder.dart`, `lib/output/csv_builder.dart`. `writeHelloWorldXlsx()` + a "Write test XLSX + CSV" button wired into `/export` (`lib/features/export/export_screen.dart`) satisfy T-08's exit criterion ("a hello-world .xlsx") — **run it on-device and confirm no Syncfusion trial watermark before trusting real exports.** |
 | **T-15** | `/review` — full implementation, verified on the iQOO 15 (12 Sep ~16:27): pinch-zoom/pan, boxes colour-coded by state with staggered reveal, pulsing unmatched, chips auto-hide when small, tap → SKU picker sheet (crop thumb, ranked candidates slot, search, **Enrol this pack** → `/enrol` with a cropped JPEG), long-press → resize/delete, resize mode with corner handles + move, long-press-drag on empty area draws a new box, summary banner with expandable untagged list that zooms to each box, `Continue (N untagged)`. Every correction writes `override_events` + `was_corrected`. | `lib/features/review/{review_screen,review_repository,sku_picker_sheet,crop_util}.dart`. Candidate ranking (`RankedSku`) is wired but empty until T-20's embedder exists. `/enrol` receives `extra: {cropPath, detectionId}`. |
+| **T-22** | `/enrol` — 3-step flow verified on the iQOO 15 (12 Sep ~16:40) end-to-end from `/review`: Enrol this pack → step 1 (crop preloaded as shot 1; New SKU form with name/grammage/unit + collapsible brand/variant/MRP/case, or Existing SKU search) → step 2 (8-slot bright/dim/angled/occluded coverage grid with auto-advance, live preview with a pack guide, shutter crops to the guide, long-press a slot to delete) → step 3 (status summary, Add more shots, Done). Done tags the originating `/review` box with the new SKU and pops back; the box goes green immediately. | `lib/features/enrolment/{enrolment_screen,enrolment_repository,enrol_camera}.dart`. **Shots are stored as crops on disk (`<docs>/enrol/<skuId>/<ms>_<context>.jpg`); `sku_embeddings` rows are only written when `embedderProvider` (in `di.dart`, currently `null`) is non-null.** T-20 must (a) provide the `EmbedderService` there and (b) call `EnrolmentRepository.backfillPendingEmbeddings()` once after load so pre-model shots become recognisable. "Test it now" re-run against the last shelf photo is not implemented — it needs detector + embedder. Crop-to-guide should become crop-to-largest-detected-box once T-13 lands (`enrol_camera.dart` `_kGuideFrac`). |
 | Support infra | Result/failure types, ids, structured logger, DI providers | `lib/core/result.dart`, `lib/core/failures.dart`, `lib/core/ids.dart`, `lib/core/logger.dart`, `lib/app/di.dart` |
 | ML threshold constants | Single source of truth for detector conf/IoU, matcher accept/reject bands, enrolment shot targets, gap-detection area | `lib/ml/common/thresholds.dart` |
 | Domain models | `lib/domain/models/models.dart` |
@@ -95,7 +101,6 @@ whoever has the phone (see compliance gaps above).**
 
 - `lib/features/shelf_report/shelf_report_screen.dart` → **T-18**
 - `lib/features/order/order_screen.dart` → **T-19** (steppers + wiring to `xlsx_builder`/`csv_builder`)
-- `lib/features/enrolment/enrolment_screen.dart` → **T-22** (3-step enrolment flow)
 - `lib/features/export/export_screen.dart` → has a working XLSX/CSV smoke-test button (T-08); still needs the real beat-level export flow + PDF + local HTTP handover (**T-19/T-30**)
 - `lib/features/diagnostics/diagnostics_screen.dart` → threshold sliders, ties to **T-25**
 - `lib/features/benchmark/benchmark_screen.dart` → **T-30/T-21** (on-device vs cloud comparison)
@@ -125,12 +130,13 @@ whoever has the phone (see compliance gaps above).**
    we're actually in, and re-plan accordingly — the schedule is time-boxed, not sequence-boxed.
 2. Get the Syncfusion Community Licence account registration done (human task, 5 minutes) and
    run the `/export` smoke-test button on the physical device to confirm no watermark.
-3. ~~Verify T-06/on-device~~ done. ~~T-15~~ done. Next on-device check: open a store → `/capture`, confirm camera
+3. ~~Verify T-06/on-device~~ done. ~~T-15~~ done. ~~T-22~~ done. Next on-device check: open a store → `/capture`, confirm camera
    preview + shutter work, then the `/export` smoke-test button (Syncfusion watermark check).
 4. Have the other two teammates actually clone `https://github.com/ARCHIT3024/ShelfSense.git` and
    confirm they can push — T-00's "all 3 can push" exit criterion is still unconfirmed.
-5. Next real feature work: C owns **T-18**/**T-19** (in progress on C's laptop). B's next is
-   **T-22** `/enrol` (G3) — `/review` already hands it `cropPath`. Then whichever of T-12/T-13
+5. Next real feature work: C owns **T-18**/**T-19** (in progress on C's laptop). B is out of
+   model-free tasks: T-16 needs the detector, T-10 (on-phone UX pass of `/capture`) is a phone-block
+   task. Then whichever of T-12/T-13
    (detector) or T-14/T-20 (embedder) has a trained model ready first.
 
 ---

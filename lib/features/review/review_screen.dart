@@ -11,7 +11,7 @@ import '../../app/di.dart';
 import '../../app/theme.dart';
 import '../../core/logger.dart';
 import '../../data/db/database.dart';
-import 'crop_util.dart';
+import '../../ml/common/image_crop.dart';
 import 'review_repository.dart';
 import 'sku_picker_sheet.dart';
 
@@ -244,7 +244,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
         outName: d.id,
       );
       if (!mounted) return;
-      context.push('/enrol', extra: {'cropPath': path, 'detectionId': d.id});
+      // /enrol tags the box with the new SKU before popping; reload to show it.
+      await context.push('/enrol', extra: {'cropPath': path, 'detectionId': d.id});
+      if (mounted) await _load(animate: false);
     } catch (e) {
       AppLogger.e(_tag, 'Crop for enrolment failed', e);
       if (mounted) {

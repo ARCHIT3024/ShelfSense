@@ -52,6 +52,7 @@ final appRouter = GoRouter(
         return EnrolmentScreen(
           skuId: extra?['skuId'] as String?,
           preloadedCropPath: extra?['cropPath'] as String?,
+          detectionId: extra?['detectionId'] as String?,
         );
       },
     ),
