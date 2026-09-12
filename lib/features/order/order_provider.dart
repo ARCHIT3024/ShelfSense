@@ -23,6 +23,7 @@ import '../../core/logger.dart';
 import '../../core/result.dart';
 import '../../domain/models/models.dart';
 import '../../domain/services/reorder_engine.dart';
+import '../../ml/llm/deterministic_visit_record.dart';
 import '../../output/csv_builder.dart';
 import '../../output/xlsx_builder.dart';
 import '../shelf_report/shelf_facts_pipeline.dart';
@@ -120,6 +121,34 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
     ));
   }
 
+  /// "+ Add line" — something the owner asked for that isn't on the shelf.
+  /// Starts at one case, flagged as an override (suggested 0) so it carries
+  /// the marker and writes an override_events row on confirm.
+  void addLine(SkusData sku) {
+    final current = state.value;
+    if (current == null) return;
+    if (current.lines.any((l) => l.skuId == sku.id)) return; // already drafted
+
+    final qty = sku.caseSize < 1 ? 1 : sku.caseSize;
+    final line = OrderLine(
+      id: _uuid.v4(),
+      visitId: _visitId,
+      skuId: sku.id,
+      skuName: sku.name,
+      skuCode: sku.code,
+      grammageLabel: _grammage(sku),
+      mrpPaise: sku.mrpPaise,
+      caseSize: sku.caseSize,
+      suggestedQty: 0,
+      finalQty: qty,
+      unit: 'unit',
+      valuePaise: qty * sku.mrpPaise,
+      wasOverridden: true,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    state = AsyncData(current.copyWith(lines: [...current.lines, line]));
+  }
+
   /// Store/beat metadata for the export header is resolved from the visit
   /// here rather than passed by the caller, so it can never be a placeholder.
   Future<void> confirmOrder() async {
@@ -144,6 +173,7 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
       final beatName = beat?.name ?? visit.beatId;
 
       await _persistOrderLines(db, current.lines);
+      await _persistVisitRecord(db, current.lines);
 
       final xlsxResult = await buildOrderXlsx(
         storeCode: storeCode,
@@ -273,6 +303,49 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
     });
   }
 
+  /// Deterministic summary + rationale (TRD §5.5 rule 5). `llm_model_id`
+  /// stays null ⇒ "no model was involved", per the schema comment. The LLM
+  /// (T-23/T-26) may later overwrite the two free-text columns only.
+  Future<void> _persistVisitRecord(
+      AppDatabase db, List<OrderLine> lines) async {
+    final skuRows = await db.select(db.skus).get();
+    final skus = {for (final r in skuRows) r.id: r};
+    final factRows = await (db.select(db.shelfFacts)
+          ..where((t) => t.visitId.equals(_visitId)))
+        .get();
+    final facts = [
+      for (final f in factRows)
+        ShelfFact(
+          id: f.id,
+          visitId: f.visitId,
+          skuId: f.skuId,
+          skuName: skus[f.skuId]?.name,
+          skuCode: skus[f.skuId]?.code,
+          detectedFacings: f.detectedFacings,
+          targetFacings: f.targetFacings,
+          status: ShelfStatus.values.firstWhere(
+            (s) => s.name == f.status,
+            orElse: () => ShelfStatus.unlisted,
+          ),
+          computedAt: f.computedAt,
+        ),
+    ];
+    final visit = await (db.select(db.visits)
+          ..where((t) => t.id.equals(_visitId)))
+        .getSingleOrNull();
+    final rec = const DeterministicVisitRecordService().record(
+      shelfFacts: facts,
+      lines: lines,
+      transcript: visit?.noteTranscript,
+    );
+    await (db.update(db.visits)..where((t) => t.id.equals(_visitId)))
+        .write(VisitsCompanion(
+      llmSummary: drift.Value(rec.summaryProse),
+      llmRationale: drift.Value(rec.reorderRationale),
+      llmModelId: const drift.Value(null),
+    ));
+  }
+
   Future<String> _getBeatId(AppDatabase db) async {
     final row = await (db.select(db.visits)
           ..where((t) => t.id.equals(_visitId)))
@@ -320,3 +393,10 @@ final orderProvider =
     AsyncNotifierProvider.family<OrderNotifier, OrderState, String>(
   OrderNotifier.new,
 );
+
+String _grammage(SkusData s) {
+  final v = s.grammageValue;
+  if (v == null) return '';
+  final disp = v == v.floorToDouble() ? v.toInt().toString() : v.toString();
+  return '$disp ${s.grammageUnit ?? ''}'.trim();
+}
