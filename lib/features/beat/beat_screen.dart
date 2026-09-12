@@ -17,18 +17,16 @@ class BeatScreen extends ConsumerStatefulWidget {
 }
 
 class _BeatScreenState extends ConsumerState<BeatScreen> {
-  // Held in state so the FutureBuilder is not handed a fresh future on every
-  // rebuild, and so we can deliberately re-run the query after seeding.
-  late Future<_BeatData> _future;
+  // Live: re-queries whenever any table changes (a confirmed order, a new
+  // draft, a seed) so the pills and header never go stale, regardless of
+  // which route brought the rep back here.
+  late final Stream<_BeatData> _stream = _watchBeatData(ref.read(dbProvider));
 
-  @override
-  void initState() {
-    super.initState();
-    _future = _loadBeatData(ref.read(dbProvider));
-  }
-
-  void _reload() {
-    setState(() => _future = _loadBeatData(ref.read(dbProvider)));
+  Stream<_BeatData> _watchBeatData(AppDatabase db) async* {
+    yield await _loadBeatData(db);
+    await for (final _ in db.tableUpdates()) {
+      yield await _loadBeatData(db);
+    }
   }
 
   @override
@@ -65,8 +63,8 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
           ),
         ],
       ),
-      body: FutureBuilder(
-        future: _future,
+      body: StreamBuilder(
+        stream: _stream,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -76,10 +74,7 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
           final stores = data.stores;
 
           if (stores.isEmpty) {
-            return _EmptyState(onLoadDemo: () async {
-              await runSeed(db);
-              if (mounted) _reload();
-            });
+            return _EmptyState(onLoadDemo: () => runSeed(db));
           }
 
           return Column(
@@ -130,14 +125,10 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
                     return _StoreRow(
                       store: s,
                       status: status,
-                      // A draft resumes where the rep left off. Reload on
-                      // return so pills and the header reflect the visit.
-                      onTap: () async {
-                        await context.push(status == 'draft'
-                            ? '/review/${data.latestVisit[s.id]!.id}'
-                            : '/store/${s.id}');
-                        if (mounted) _reload();
-                      },
+                      // A draft resumes where the rep left off.
+                      onTap: () => context.push(status == 'draft'
+                          ? '/review/${data.latestVisit[s.id]!.id}'
+                          : '/store/${s.id}'),
                     );
                   },
                 ),
