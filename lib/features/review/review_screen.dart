@@ -25,8 +25,11 @@ const _kChipMinWidthPx = 44.0;
 const _kMinBoxFrac = 0.02;
 
 class ReviewScreen extends ConsumerStatefulWidget {
-  const ReviewScreen({super.key, required this.visitId});
+  const ReviewScreen({super.key, required this.visitId, this.focusSkuId});
   final String visitId;
+
+  /// From `/shelf`: zoom to this SKU's first box once loaded.
+  final String? focusSkuId;
 
   @override
   ConsumerState<ReviewScreen> createState() => _ReviewScreenState();
@@ -101,10 +104,38 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
         _resolveImageSize(p);
       }
       if (animate) _reveal.forward(from: 0);
+      _applyFocus(data);
     } catch (e) {
       AppLogger.e(_tag, 'Load failed', e);
       if (mounted) setState(() => _loadError = e);
     }
+  }
+
+  bool _focusDone = false;
+
+  /// Zooms to the focused SKU after the viewer has laid out (needs
+  /// `_photoRect`, which only exists after the first frame with an image).
+  void _applyFocus(ReviewData data) {
+    final sku = widget.focusSkuId;
+    if (sku == null || _focusDone) return;
+    final target = data.detections.where((d) => d.skuId == sku).firstOrNull;
+    if (target == null) {
+      _focusDone = true;
+      return;
+    }
+    void attempt(int triesLeft) {
+      if (!mounted) return;
+      if (_photoRect != Rect.zero) {
+        _focusDone = true;
+        _jumpTo(target);
+        return;
+      }
+      if (triesLeft > 0) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => attempt(triesLeft - 1));
+      }
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => attempt(30));
   }
 
   void _resolveImageSize(VisitPhoto p) {
@@ -325,11 +356,13 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
         .clamp(1.0, 5.0);
     final cx = _photoRect.left + (d.x1 + d.x2) / 2 * _photoRect.width;
     final cy = _photoRect.top + (d.y1 + d.y2) / 2 * _photoRect.height;
-    _transform.value = Matrix4.translationValues(
-          _viewport.width / 2 - cx * target,
-          _viewport.height / 2 - cy * target,
-          0,
-        ) *
+    // Clamp so the zoomed child never pulls away from the viewport edges
+    // (InteractiveViewer only clamps user gestures, not a set transform).
+    final tx = (_viewport.width / 2 - cx * target)
+        .clamp(_viewport.width * (1 - target), 0.0);
+    final ty = (_viewport.height / 2 - cy * target)
+        .clamp(_viewport.height * (1 - target), 0.0);
+    _transform.value = Matrix4.translationValues(tx, ty, 0) *
         Matrix4.diagonal3Values(target, target, 1);
     setState(() => _summaryExpanded = false);
   }
@@ -539,7 +572,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                     maxScale: 6,
                     panEnabled: !editing && _drawStart == null,
                     scaleEnabled: !editing && _drawStart == null,
-                    clipBehavior: Clip.none,
                     child: SizedBox(
                       width: vw,
                       height: vh,

@@ -22,11 +22,10 @@ import '../../core/ids.dart';
 import '../../core/logger.dart';
 import '../../core/result.dart';
 import '../../domain/models/models.dart';
-import '../../domain/services/facing_counter.dart';
-import '../../domain/services/planogram_diff.dart';
 import '../../domain/services/reorder_engine.dart';
 import '../../output/csv_builder.dart';
 import '../../output/xlsx_builder.dart';
+import '../shelf_report/shelf_facts_pipeline.dart';
 
 const _tag = 'OrderProvider';
 const _uuid = Uuid();
@@ -121,11 +120,9 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
     ));
   }
 
-  Future<void> confirmOrder({
-    required String storeCode,
-    required String storeName,
-    required String beatName,
-  }) async {
+  /// Store/beat metadata for the export header is resolved from the visit
+  /// here rather than passed by the caller, so it can never be a placeholder.
+  Future<void> confirmOrder() async {
     final current = state.value;
     if (current == null || !current.hasLines) return;
 
@@ -133,6 +130,19 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
 
     try {
       final db = ref.read(dbProvider);
+      final visit = await (db.select(db.visits)
+            ..where((t) => t.id.equals(_visitId)))
+          .getSingle();
+      final store = await (db.select(db.stores)
+            ..where((t) => t.id.equals(visit.storeId)))
+          .getSingleOrNull();
+      final beat = await (db.select(db.beats)
+            ..where((t) => t.id.equals(visit.beatId)))
+          .getSingleOrNull();
+      final storeCode = store?.code ?? visit.storeId;
+      final storeName = store?.name ?? 'Unknown store';
+      final beatName = beat?.name ?? visit.beatId;
+
       await _persistOrderLines(db, current.lines);
 
       final xlsxResult = await buildOrderXlsx(
@@ -187,69 +197,16 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
         .getSingleOrNull();
     if (visit == null) throw StateError('Visit $_visitId not found');
 
-    final skuRows = await (db.select(db.skus)
-          ..where((t) => t.isActive.equals(true)))
-        .get();
-    final skus = skuRows.map(_skuFromRow).toList();
-    final skuById = {for (final s in skus) s.id: s};
-
-    final detRows = await (db.select(db.detections)
-          ..where((t) => t.visitId.equals(_visitId)))
-        .get();
-    final boxes = detRows.map(_matchedBoxFromRow).toList();
-
-    final planRows = await (db.select(db.planogramEntries)
-          ..where((t) => t.storeId.equals(visit.storeId)))
-        .get();
-    final targets = {for (final r in planRows) r.skuId: r.targetFacings};
+    // FacingCounter → PlanogramDiff → shelf_facts, shared with /shelf.
+    final report = await computeShelfFacts(db, _visitId);
+    final skus = report.skus.values.toList();
 
     final trailingQty = await _computeTrailingQty(
-        db, visit.storeId, skuById.keys.toList());
-
-    // FacingCounter
-    Map<String, int> counted = {};
-    if (boxes.isNotEmpty) {
-      final r = const FacingCounter().count(boxes);
-      if (r.isOk) {
-        counted = Map<String, int>.from(r.valueOrNull!.bySku);
-      } else {
-        AppLogger.w(_tag, 'FacingCounter: ${r.failureOrNull?.message}');
-      }
-    }
-
-    // PlanogramDiff + persist
-    List<ShelfFact> facts = [];
-    if (counted.isNotEmpty || targets.isNotEmpty) {
-      final r = const PlanogramDiff().diff(
-        counted: counted,
-        targets: targets,
-        visitId: _visitId,
-      );
-      if (r.isOk) {
-        facts = r.valueOrNull!.map((f) {
-          final sku = skuById[f.skuId];
-          return ShelfFact(
-            id: f.id,
-            visitId: f.visitId,
-            skuId: f.skuId,
-            skuName: sku?.name,
-            skuCode: sku?.code,
-            grammageLabel: sku?.grammageLabel,
-            detectedFacings: f.detectedFacings,
-            targetFacings: f.targetFacings,
-            status: f.status,
-            computedAt: f.computedAt,
-          );
-        }).toList();
-        await _persistShelfFacts(db, facts);
-      } else {
-        AppLogger.w(_tag, 'PlanogramDiff: ${r.failureOrNull?.message}');
-      }
-    }
+        db, visit.storeId, report.skus.keys.toList());
 
     // ReorderEngine
     final r = const ReorderEngine().suggest(
-      facts: facts,
+      facts: report.facts,
       skus: skus,
       visitId: _visitId,
       trailingQty: trailingQty,
@@ -261,32 +218,6 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
   }
 
   // ── DB helpers ────────────────────────────────────────────────────────────
-
-  Future<void> _persistShelfFacts(
-      AppDatabase db, List<ShelfFact> facts) async {
-    await db.transaction(() async {
-      await (db.delete(db.shelfFacts)
-            ..where((t) => t.visitId.equals(_visitId)))
-          .go();
-      await db.batch((b) {
-        for (final f in facts) {
-          b.insert(
-            db.shelfFacts,
-            ShelfFactsCompanion(
-              id: drift.Value(f.id),
-              visitId: drift.Value(f.visitId),
-              skuId: drift.Value(f.skuId),
-              detectedFacings: drift.Value(f.detectedFacings),
-              targetFacings: drift.Value(f.targetFacings),
-              status: drift.Value(f.status.name),
-              computedAt: drift.Value(f.computedAt),
-            ),
-            mode: drift.InsertMode.insertOrReplace,
-          );
-        }
-      });
-    });
-  }
 
   Future<void> _persistOrderLines(
       AppDatabase db, List<OrderLine> lines) async {
@@ -380,47 +311,6 @@ class OrderNotifier extends AsyncNotifier<OrderState> {
     return result;
   }
 }
-
-// ---------------------------------------------------------------------------
-// DB row → domain model mappers
-// ---------------------------------------------------------------------------
-
-Sku _skuFromRow(SkusData r) => Sku(
-      id: r.id,
-      code: r.code,
-      name: r.name,
-      brand: r.brand,
-      category: r.category,
-      grammageValue: r.grammageValue,
-      grammageUnit: r.grammageUnit,
-      variant: r.variant,
-      mrpPaise: r.mrpPaise,
-      caseSize: r.caseSize,
-      isEnrolled: r.isEnrolled,
-      isActive: r.isActive,
-      createdAt: r.createdAt,
-    );
-
-MatchedBox _matchedBoxFromRow(Detection r) => MatchedBox(
-      id: r.id,
-      box: RawBox(
-        x1: r.x1,
-        y1: r.y1,
-        x2: r.x2,
-        y2: r.y2,
-        score: r.detConfidence,
-      ),
-      detConfidence: r.detConfidence,
-      skuId: r.skuId,
-      matchConfidence: r.matchConfidence,
-      method: MatchMethod.values.firstWhere(
-        (m) => m.name == r.matchMethod,
-        orElse: () => MatchMethod.unmatched,
-      ),
-      shelfRow: r.shelfRow,
-      isGap: r.isGap,
-      wasCorrected: r.wasCorrected,
-    );
 
 // ---------------------------------------------------------------------------
 // Provider (AsyncNotifierProvider.family — Riverpod 3.x)

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show BooleanExpressionOperators, OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,6 @@ import 'package:intl/intl.dart';
 
 import '../../app/di.dart';
 import '../../app/theme.dart';
-import '../../core/ids.dart';
 import '../../data/db/database.dart';
 import '../../data/seed/seed_data.dart';
 
@@ -90,17 +90,29 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: Sp.screen, vertical: Sp.md),
                 color: AppColors.surface,
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        beat?.name ?? 'Today\'s Beat',
-                        style: AppText.heading,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            beat?.name ?? "Today's Beat",
+                            style: AppText.heading,
+                          ),
+                        ),
+                        Text(
+                          DateFormat('dd MMM').format(DateTime.now()),
+                          style: AppText.label,
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: Sp.xs),
                     Text(
-                      DateFormat('dd MMM').format(DateTime.now()),
-                      style: AppText.label,
+                      '${data.doneCount} / ${stores.length} done'
+                      '  ·  ₹${NumberFormat('#,##0').format(data.valuePaise ~/ 100)}'
+                      '  ·  ${data.stockouts} stockout${data.stockouts == 1 ? '' : 's'}',
+                      style: AppText.mono.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -114,9 +126,14 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: Sp.sm),
                   itemBuilder: (context, i) {
                     final s = stores[i];
+                    final status = data.statusOf(s);
                     return _StoreRow(
                       store: s,
-                      onTap: () => context.go('/store/${s.id}'),
+                      status: status,
+                      // A draft resumes where the rep left off.
+                      onTap: () => status == 'draft'
+                          ? context.go('/review/${data.latestVisit[s.id]!.id}')
+                          : context.go('/store/${s.id}'),
                     );
                   },
                 ),
@@ -135,23 +152,75 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
 
   Future<_BeatData> _loadBeatData(AppDatabase db) async {
     final beats = await db.select(db.beats).get();
-    final stores = await db.select(db.stores).get();
+    final stores = await (db.select(db.stores)
+          ..orderBy([(t) => OrderingTerm.asc(t.sequence)]))
+        .get();
+
+    // Latest visit per store decides the pill; confirmed visits feed the
+    // header numbers (06_APP_FLOW §`/beat`).
+    final visits = await (db.select(db.visits)
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
+        .get();
+    final latest = <String, Visit>{};
+    for (final v in visits) {
+      latest.putIfAbsent(v.storeId, () => v);
+    }
+    final confirmedIds = [
+      for (final v in latest.values)
+        if (v.status != 'draft') v.id,
+    ];
+
+    var valuePaise = 0;
+    var stockouts = 0;
+    if (confirmedIds.isNotEmpty) {
+      final lines = await (db.select(db.orderLines)
+            ..where((t) => t.visitId.isIn(confirmedIds)))
+          .get();
+      valuePaise = lines.fold(0, (sum, l) => sum + l.valuePaise);
+      final facts = await (db.select(db.shelfFacts)
+            ..where((t) =>
+                t.visitId.isIn(confirmedIds) & t.status.equals('stockout')))
+          .get();
+      stockouts = facts.length;
+    }
+
     return _BeatData(
       beat: beats.isEmpty ? null : beats.first,
       stores: stores,
+      latestVisit: latest,
+      doneCount: confirmedIds.length,
+      valuePaise: valuePaise,
+      stockouts: stockouts,
     );
   }
 }
 
 class _BeatData {
-  const _BeatData({required this.beat, required this.stores});
+  const _BeatData({
+    required this.beat,
+    required this.stores,
+    required this.latestVisit,
+    required this.doneCount,
+    required this.valuePaise,
+    required this.stockouts,
+  });
   final Beat? beat;
   final List<Store> stores;
+  final Map<String, Visit> latestVisit;
+  final int doneCount, valuePaise, stockouts;
+
+  String statusOf(Store s) {
+    final v = latestVisit[s.id];
+    if (v == null) return 'pending';
+    return v.status == 'draft' ? 'draft' : 'done';
+  }
 }
 
 class _StoreRow extends StatelessWidget {
-  const _StoreRow({required this.store, required this.onTap});
+  const _StoreRow(
+      {required this.store, required this.status, required this.onTap});
   final Store store;
+  final String status;
   final VoidCallback onTap;
 
   @override
@@ -192,7 +261,7 @@ class _StoreRow extends StatelessWidget {
                 ),
               ),
               // Status pill — pending for now
-              _StatusPill(status: 'pending'),
+              _StatusPill(status: status),
             ],
           ),
         ),

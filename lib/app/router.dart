@@ -32,8 +32,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/review/:visitId',
-      builder: (_, state) =>
-          ReviewScreen(visitId: state.pathParameters['visitId']!),
+      builder: (_, state) => ReviewScreen(
+        visitId: state.pathParameters['visitId']!,
+        focusSkuId: state.uri.queryParameters['sku'],
+      ),
     ),
     GoRoute(
       path: '/shelf/:visitId',

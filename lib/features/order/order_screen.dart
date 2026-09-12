@@ -16,17 +16,8 @@ import '../../domain/models/models.dart';
 import 'order_provider.dart';
 
 class OrderScreen extends ConsumerWidget {
-  const OrderScreen({
-    super.key,
-    required this.visitId,
-    this.storeCode = 'STORE',
-    this.storeName = 'Store',
-    this.beatName = 'Beat',
-  });
+  const OrderScreen({super.key, required this.visitId});
   final String visitId;
-  final String storeCode;
-  final String storeName;
-  final String beatName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,9 +53,6 @@ class OrderScreen extends ConsumerWidget {
           }
           return _ConfirmBar(
             visitId: visitId,
-            storeCode: storeCode,
-            storeName: storeName,
-            beatName: beatName,
             totalPaise: state.totalValuePaise,
           );
         },
@@ -340,17 +328,8 @@ class _StepBtn extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ConfirmBar extends ConsumerWidget {
-  const _ConfirmBar({
-    required this.visitId,
-    required this.storeCode,
-    required this.storeName,
-    required this.beatName,
-    required this.totalPaise,
-  });
+  const _ConfirmBar({required this.visitId, required this.totalPaise});
   final String visitId;
-  final String storeCode;
-  final String storeName;
-  final String beatName;
   final int totalPaise;
 
   @override
@@ -367,11 +346,7 @@ class _ConfirmBar extends ConsumerWidget {
             backgroundColor: AppColors.primary,
           ),
           onPressed: () =>
-              ref.read(orderProvider(visitId).notifier).confirmOrder(
-                    storeCode: storeCode,
-                    storeName: storeName,
-                    beatName: beatName,
-                  ),
+              ref.read(orderProvider(visitId).notifier).confirmOrder(),
         ),
       ),
     );
