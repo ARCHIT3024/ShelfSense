@@ -20,6 +20,37 @@ Pull 2 (13 Sep 00:30): **13 SKUs, 107 crops.** `OLAY-200G` (1 abandoned shot) me
 - Re-shooting with real packs on the physical rack replaces this set; the app names and organises
   everything, one adb pull refreshes this folder.
 
+## Results (13 Sep 01:40 — `assets/models/embedder_fp16.tflite`, 2.04 MB)
+
+MobileNetV3-Small (ImageNet, frozen) + 128-d head, L2-normalised; scaled-cosine softmax with a
+0.15 margin; hard augmentation. 81 train / 26 held-out (last bright + last other shot per SKU),
+60 epochs, **34 s on the laptop CPU**.
+
+| Metric (held-out, nearest neighbour by cosine — what the app does) | fp16 TFLite |
+|---|---|
+| top-1 | **26 / 26 = 100%** |
+| mean cosine to own SKU / to best other SKU | 0.856 / 0.423 |
+| worst margin (own − best other) | +0.086 |
+| app routing @ 0.72 / 0.55 | 23 accept · 2 low-confidence (amber) · 1 unmatched |
+| confusions | none |
+
+Closest SKU pairs by mean cross-cosine (the ones to watch on the rack): DOVE-100G ~ NIVEA-500G
+0.33, CADBUR-200G ~ TONE-200G 0.25, PEPSI-1000ML ~ PEPSI-550ML 0.24, DOVE-100G ~ DOVE-250ML 0.23.
+The feared Pepsi size-variant collapse did not happen on this set — but 26 held-out crops from the
+same screen photos is a small, optimistic test; expect lower scores on the physical rack.
+
+**INT8 is not shipped.** The full-integer export fails to prepare under XNNPACK (MobileNetV3
+hard-swish), so `train_embedder.py` only promotes it if it loads and scores within 2 points of
+fp16. Do not hand-copy an int8 file into `assets/models/` — the app prefers it over fp16.
+
+Reproduce (Python 3.11, ~2 min incl. the ImageNet weight download):
+```
+cd ml/embedder && python -m venv .venv
+.venv/Scripts/pip install tensorflow==2.19.0 pillow numpy ai-edge-litert
+.venv/Scripts/python train_embedder.py      # -> assets/models/embedder_fp16.tflite, results.json
+.venv/Scripts/python verify_embedder.py     # tensor dump, held-out NN, confusions, cosine matrix
+```
+
 ## Contract for the export (already wired in the app)
 
 `assets/models/embedder_int8.tflite` (or `_fp16` / `_fp32`): input `[1,224,224,3]` NHWC or
