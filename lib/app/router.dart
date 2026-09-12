@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/beat/beat_screen.dart';
+import '../features/store/store_screen.dart';
+import '../features/capture/capture_screen.dart';
+import '../features/review/review_screen.dart';
+import '../features/shelf_report/shelf_report_screen.dart';
+import '../features/order/order_screen.dart';
+import '../features/enrolment/enrolment_screen.dart';
+import '../features/export/export_screen.dart';
+import '../features/benchmark/benchmark_screen.dart';
+import '../features/diagnostics/diagnostics_screen.dart';
+
+final appRouter = GoRouter(
+  initialLocation: '/beat',
+  debugLogDiagnostics: false,
+  routes: [
+    GoRoute(
+      path: '/beat',
+      builder: (_, __) => const BeatScreen(),
+    ),
+    GoRoute(
+      path: '/store/:storeId',
+      builder: (_, state) =>
+          StoreScreen(storeId: state.pathParameters['storeId']!),
+    ),
+    GoRoute(
+      path: '/capture/:visitId',
+      builder: (_, state) =>
+          CaptureScreen(visitId: state.pathParameters['visitId']!),
+    ),
+    GoRoute(
+      path: '/review/:visitId',
+      builder: (_, state) =>
+          ReviewScreen(visitId: state.pathParameters['visitId']!),
+    ),
+    GoRoute(
+      path: '/shelf/:visitId',
+      builder: (_, state) =>
+          ShelfReportScreen(visitId: state.pathParameters['visitId']!),
+    ),
+    GoRoute(
+      path: '/order/:visitId',
+      builder: (_, state) =>
+          OrderScreen(visitId: state.pathParameters['visitId']!),
+    ),
+    GoRoute(
+      path: '/enrol',
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return EnrolmentScreen(
+          skuId: extra?['skuId'] as String?,
+          preloadedCropPath: extra?['cropPath'] as String?,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/export',
+      builder: (_, __) => const ExportScreen(),
+    ),
+    GoRoute(
+      path: '/benchmark',
+      builder: (_, __) => const BenchmarkScreen(),
+    ),
+    GoRoute(
+      path: '/diagnostics',
+      builder: (_, __) => const DiagnosticsScreen(),
+    ),
+  ],
+  errorBuilder: (_, state) => Scaffold(
+    body: Center(
+      child: Text('Route not found: ${state.error}'),
+    ),
+  ),
+);

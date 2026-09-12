@@ -1,0 +1,14 @@
+[
+  {"id":"store-001","code":"KIR-0101","name":"Kumar Stores","beat_id":"beat-001","owner_name":"Rajesh Kumar","phone":"9876543210","address":"12, Anna Nagar East, Chennai","sequence":1},
+  {"id":"store-002","code":"KIR-0102","name":"Murugan Kirana","beat_id":"beat-001","owner_name":"Murugan S","phone":"9876543211","address":"45, 2nd Ave, Anna Nagar","sequence":2},
+  {"id":"store-003","code":"KIR-0103","name":"Sri Lakshmi Stores","beat_id":"beat-001","owner_name":"Lakshmi Devi","phone":"9876543212","address":"7, 9th Main Rd, Anna Nagar","sequence":3},
+  {"id":"store-004","code":"KIR-0104","name":"Vel Murugan Mini Mart","beat_id":"beat-001","owner_name":"Velmurugan P","phone":"9876543213","address":"88, 3rd Ave","sequence":4},
+  {"id":"store-005","code":"KIR-0105","name":"Annamalai Provision","beat_id":"beat-001","owner_name":"Annamalai T","phone":"9876543214","address":"22, K Block Anna Nagar","sequence":5},
+  {"id":"store-006","code":"KIR-0106","name":"Pandian Kirana","beat_id":"beat-001","owner_name":"Pandian R","phone":"9876543215","address":"5, 15th Cross, Anna Nagar","sequence":6},
+  {"id":"store-007","code":"KIR-0107","name":"Balaji General Stores","beat_id":"beat-001","owner_name":"Balaji K","phone":"9876543216","address":"31, 7th Ave","sequence":7},
+  {"id":"store-008","code":"KIR-0108","name":"Rajan Provisions","beat_id":"beat-001","owner_name":"Rajan M","phone":"9876543217","address":"60, L Block","sequence":8},
+  {"id":"store-009","code":"KIR-0109","name":"Suresh Fancy Stores","beat_id":"beat-001","owner_name":"Suresh D","phone":"9876543218","address":"11, 11th Main Rd","sequence":9},
+  {"id":"store-010","code":"KIR-0110","name":"Saravana Kirana","beat_id":"beat-001","owner_name":"Saravana P","phone":"9876543219","address":"99, 4th Ave","sequence":10},
+  {"id":"store-011","code":"KIR-0111","name":"Tamil Nadu Provisions","beat_id":"beat-001","owner_name":"Arumugam S","phone":"9876543220","address":"3, 6th Cross","sequence":11},
+  {"id":"store-012","code":"KIR-0112","name":"Ganesha Stores","beat_id":"beat-001","owner_name":"Ganesha R","phone":"9876543221","address":"17, 5th Ave, Anna Nagar","sequence":12}
+]
