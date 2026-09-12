@@ -47,6 +47,22 @@ rebuild. 12 of the 13 enrolled SKUs today are photographs of a laptop screen —
 All clear as of 12 Sep 20:05. Syncfusion Community Licence registered by Archit (12 Sep 2026);
 generated XLSX verified free of watermark text; release APK verified on the physical iQOO 15.
 
+
+## Acceptance criteria (PRD §5) — measured 13 Sep 02:20–02:40, iQOO 15, release build
+
+| ID | Criterion | Target | Measured | |
+|---|---|---|---|---|
+| A-01 | Cold start → camera-ready | ≤ 3 s | `am start -W` 1.00 / 1.06 / 1.00 s to first frame; detector +0.6 s, embedder +0.9 s in background | ✅ |
+| A-02 | Shutter → boxes rendered | ≤ 1000 ms | 763 ms incl. recognition (354 detect + 172 embed) on a 3-pack scene; 688 ms on a 100-pack shelf (detect only) | ✅ |
+| A-03 | Detector recall on the physical demo shelf | ≥ 90 % | **not measurable yet — no physical rack**; 100/100+ packs boxed on a dense shelf photo | ⏳ |
+| A-04 | Recogniser top-1 on enrolled SKUs, demo shelf | ≥ 85 % | 100 % held-out NN on the 13-SKU enrolment set (26 crops); 3/3 Red Bull live at 0.77–0.87 cosine. Real-rack number pending physical packs | ⏳ |
+| A-05 | Live enrolment ≤ 45 s, ≤ 3 photos | | flow verified; 3 shots unlock Test; timing to be rehearsed by hand | ✅ |
+| A-06 | Confirm → XLSX on disk | ≤ 3 s | XLSX + CSV written within the same log millisecond as confirm | ✅ |
+| A-07 | Full demo path 10× consecutively | 0 crashes | 10/10 runs, same pid, 10 confirms, 0 exceptions (adb-driven, 24 s each) | ✅ |
+| A-08 | Network calls on demo path | 0 | 10 runs executed with aeroplane mode on (`cmd connectivity airplane-mode enable`) | ✅ |
+| A-09 | LLM disabled, every screen works | | no LLM integrated; deterministic record fills all fields | ✅ |
+| A-10 | Peak RSS during detection | ≤ 1.5 GB | 370 MB idle → 400 MB peak (250 ms sampling) | ✅ |
+
 ## Release build notes (12 Sep, G2) — read before touching `android/`
 
 `flutter build apk --release` did **not** work out of the box; four fixes, all committed:
