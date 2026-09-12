@@ -6,6 +6,8 @@ import '../ml/detector/tflite_detector.dart';
 import '../ml/embedder/embedder_service.dart';
 import '../ml/embedder/sku_index.dart';
 import '../ml/embedder/tflite_embedder.dart';
+import '../ml/ocr/mlkit_ocr_service.dart';
+import '../ml/ocr/ocr_service.dart';
 
 /// Global database provider — single instance for the app lifetime.
 final dbProvider = Provider<AppDatabase>((ref) {
@@ -61,4 +63,14 @@ final detectorProvider = Provider<DetectorService?>((ref) {
     d.close();
   });
   return d;
+});
+
+/// Grammage OCR (F-22 / T-30). ML Kit's Latin recogniser is bundled, so
+/// nothing to load up front: the TextRecognizer is created on first use.
+/// Only the capture pipeline calls it, and only for a low-confidence match
+/// between same-brand size variants.
+final ocrProvider = Provider<OcrService?>((ref) {
+  final o = MlKitOcrService();
+  ref.onDispose(o.close);
+  return o;
 });
