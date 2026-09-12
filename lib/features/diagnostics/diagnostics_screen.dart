@@ -376,7 +376,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
                     ButtonSegment(
                         value: ThemeMode.system,
                         icon: Icon(Icons.brightness_auto),
-                        label: Text('System')),
+                        label: Text('Auto')),
                     ButtonSegment(
                         value: ThemeMode.light,
                         icon: Icon(Icons.light_mode),
