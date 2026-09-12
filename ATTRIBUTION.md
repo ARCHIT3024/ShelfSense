@@ -25,6 +25,16 @@ Open-source packages and models used, per the event rules' attribution requireme
 | [`pdf`](https://pub.dev/packages/pdf) / [`printing`](https://pub.dev/packages/printing) | Apache-2.0 / MIT | On-device PDF route summary generation. |
 | [`camera`](https://pub.dev/packages/camera), [`go_router`](https://pub.dev/packages/go_router), [`flutter_riverpod`](https://pub.dev/packages/flutter_riverpod), [`geolocator`](https://pub.dev/packages/geolocator), [`connectivity_plus`](https://pub.dev/packages/connectivity_plus), [`permission_handler`](https://pub.dev/packages/permission_handler), [`path_provider`](https://pub.dev/packages/path_provider), [`uuid`](https://pub.dev/packages/uuid), [`intl`](https://pub.dev/packages/intl) | Various (BSD/MIT/Apache-2.0) | Standard Flutter ecosystem packages — see each package's own licence on pub.dev. |
 
+## Models and data
+
+| Asset | Licence | Use |
+|---|---|---|
+| [Ultralytics YOLO11n](https://github.com/ultralytics/ultralytics) (`yolo11n.pt` pretrained weights + training/export toolchain, v8.4.149) | AGPL-3.0 | Starting point and trainer for the Pack Finder. The app bundles only our exported `.tflite`, not Ultralytics code. |
+| [SKU-110K](https://github.com/eg4000/SKU110K_CVPR19) (Goldman et al., CVPR 2019) | Academic / non-commercial research use, per the dataset's terms | 3,000-image training subset + 588 validation for the class-agnostic Pack Finder; 2,935-image test set for the reported mAP. Not redistributed. |
+
+Pack Finder: YOLO11n, single class, trained 12 Sep 2026 during the build window on an RTX 4050
+(30 epochs, 640 px, batch 8). Held-out SKU-110K test: P 0.887 · R 0.813 · mAP50 0.889 · mAP50-95 0.531.
+
 ## Syncfusion licence note
 
 `syncfusion_flutter_xlsio` is a commercial package. It is used here under the **Syncfusion

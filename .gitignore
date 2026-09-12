@@ -44,3 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 post_clone_progress.md
+
+# ML training artefacts — never commit these (datasets, runs, checkpoints
+# other than the single deployable best.pt under ml/)
+ml/**/datasets/
+ml/**/runs/
+*.pt
+!ml/pack_finder/models/pack_finder_yolo11n_best.pt

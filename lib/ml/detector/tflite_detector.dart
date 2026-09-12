@@ -13,6 +13,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -68,11 +69,20 @@ class DetectorInfo {
 
 class TfliteDetector implements DetectorService {
   TfliteDetector({
-    this.assetPath = 'assets/models/detector_int8.tflite',
+    this.assetPath,
     this.config = const DetectorConfig(),
   });
 
-  final String assetPath;
+  /// Explicit model path, or `null` to take the first of [kCandidateAssets]
+  /// that exists — so A can drop in whichever export succeeded first.
+  final String? assetPath;
+
+  static const kCandidateAssets = [
+    'assets/models/detector_int8.tflite',
+    'assets/models/detector_fp16.tflite',
+    'assets/models/detector_fp32.tflite',
+  ];
+  String? loadedAsset;
   DetectorConfig config;
 
   Interpreter? _interpreter;
@@ -94,6 +104,22 @@ class TfliteDetector implements DetectorService {
     if (_interpreter != null) return const Ok(null);
     final t0 = DateTime.now().millisecondsSinceEpoch;
 
+    // Find the model bytes first so a missing file fails fast and quietly.
+    Uint8List? bytes;
+    for (final path in [if (assetPath != null) assetPath!, ...kCandidateAssets]) {
+      try {
+        bytes = (await rootBundle.load(path)).buffer.asUint8List();
+        loadedAsset = path;
+        break;
+      } catch (_) {
+        // not bundled — try the next candidate
+      }
+    }
+    if (bytes == null) {
+      AppLogger.w(_tag, 'No detector model bundled — manual boxes');
+      return const Err(DetectorNotLoaded());
+    }
+
     Interpreter? interp;
     var delegateName = 'cpu';
     for (final attempt in ['gpu', 'xnnpack', 'cpu']) {
@@ -105,7 +131,7 @@ class TfliteDetector implements DetectorService {
           case 'xnnpack':
             opts.addDelegate(XNNPackDelegate());
         }
-        interp = await Interpreter.fromAsset(assetPath, options: opts);
+        interp = Interpreter.fromBuffer(bytes, options: opts);
         delegateName = attempt;
         break;
       } catch (e) {
@@ -115,6 +141,7 @@ class TfliteDetector implements DetectorService {
     if (interp == null) {
       return const Err(DetectorNotLoaded());
     }
+    AppLogger.i(_tag, 'Using $loadedAsset');
 
     // ---- Dump + assert the tensor contract before anything else --------
     final inputs = interp.getInputTensors();
