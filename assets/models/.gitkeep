@@ -1,0 +1,3 @@
+Drop detector_int8.tflite (T-12) and embedder_int8.tflite (T-14) here.
+This file exists only so the directory survives git (git doesn't track
+empty directories, and pubspec.yaml requires this path to exist).

@@ -1,0 +1,3 @@
+Drop the 20-image eval set (T-21) here.
+This file exists only so the directory survives git (git doesn't track
+empty directories, and pubspec.yaml requires this path to exist).

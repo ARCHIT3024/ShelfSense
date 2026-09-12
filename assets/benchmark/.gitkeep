@@ -1,0 +1,3 @@
+Drop cloud_baseline.json (T-21) here once the OpenRouter run is done.
+This file exists only so the directory survives git (git doesn't track
+empty directories, and pubspec.yaml requires this path to exist).
