@@ -9,6 +9,7 @@ import '../features/shelf_report/shelf_report_screen.dart';
 import '../features/order/order_screen.dart';
 import '../features/enrolment/enrolment_screen.dart';
 import '../features/export/export_screen.dart';
+import '../features/handover/handover_screen.dart';
 import '../features/benchmark/benchmark_screen.dart';
 import '../features/diagnostics/diagnostics_screen.dart';
 
@@ -63,6 +64,10 @@ final appRouter = GoRouter(
       builder: (_, __) => const ExportScreen(),
     ),
     GoRoute(
+      path: '/handover',
+      builder: (_, _) => const HandoverScreen(),
+    ),
+    GoRoute(
       path: '/benchmark',
       builder: (_, __) => const BenchmarkScreen(),
     ),
@@ -73,7 +78,7 @@ final appRouter = GoRouter(
   ],
   errorBuilder: (_, state) => Scaffold(
     body: Center(
-      child: Text('Route not found: ${state.error}'),
+      child: Text('That screen does not exist.\n${state.error}'),
     ),
   ),
 );
