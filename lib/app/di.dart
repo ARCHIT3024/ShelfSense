@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db/database.dart';
+import '../ml/common/thresholds.dart';
 import '../ml/detector/detector_service.dart';
 import '../ml/detector/tflite_detector.dart';
 import '../ml/embedder/embedder_service.dart';
@@ -11,6 +12,15 @@ final dbProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+/// Live ML thresholds (Diagnostics sliders, T-25). Loaded from
+/// `app_settings` in `main.dart`; every change is written back so it
+/// survives a restart. The detector and the recogniser routing read from
+/// here, so retuning never needs a rebuild.
+final thresholdsProvider = Provider<RuntimeThresholds>((ref) {
+  final db = ref.watch(dbProvider);
+  return RuntimeThresholds(persist: db.setSetting);
 });
 
 /// SKU recogniser (T-20). Created eagerly and loaded in the background at
@@ -37,6 +47,18 @@ final skuIndexProvider = Provider<SkuIndex>((ref) {
 /// and the app stays in manual mode.
 final detectorProvider = Provider<DetectorService?>((ref) {
   final d = TfliteDetector();
-  ref.onDispose(d.close);
+  // Follow the live thresholds without a rebuild.
+  final t = ref.watch(thresholdsProvider);
+  void sync() => d.config = DetectorConfig(
+        confThreshold: t.detConf,
+        nmsIou: t.detNmsIou,
+        maxBoxes: t.detMaxBoxes,
+      );
+  sync();
+  t.addListener(sync);
+  ref.onDispose(() {
+    t.removeListener(sync);
+    d.close();
+  });
   return d;
 });
