@@ -140,7 +140,7 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/export'),
         icon: const Icon(Icons.file_download_outlined),
-        label: const Text('Export Beat'),
+        label: const Text('Export beat'),
       ),
     );
   }

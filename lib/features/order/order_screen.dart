@@ -30,7 +30,7 @@ class OrderScreen extends ConsumerWidget {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text('Order Draft', style: AppText.title),
+        title: const Text('Order draft', style: AppText.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -578,9 +578,9 @@ class _ConfirmedView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, size: 72, color: Colors.green),
+            const Icon(Icons.check_circle, size: 72, color: AppColors.success),
             const SizedBox(height: Sp.md),
-            Text('Visit confirmed!', style: AppText.title),
+            Text('Visit confirmed', style: AppText.title),
             const SizedBox(height: Sp.sm),
             Text(
               '${state.lines.length} lines  ·  '
@@ -607,7 +607,7 @@ class _ConfirmedView extends StatelessWidget {
             const SizedBox(height: Sp.lg),
             OutlinedButton.icon(
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Back to Beat'),
+              label: const Text('Back to beat'),
               onPressed: () => context.go('/beat'),
             ),
           ],
@@ -662,17 +662,17 @@ class _EmptyView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.inventory_2_outlined,
-                  size: 64, color: Colors.green),
+                  size: 64, color: AppColors.success),
               const SizedBox(height: Sp.md),
-              Text('All stocked up!', style: AppText.title),
+              Text('Shelf matches the plan', style: AppText.title),
               const SizedBox(height: Sp.sm),
-              Text('No reorder needed for this visit.',
+              Text('Nothing to reorder at this visit.',
                   style: AppText.body,
                   textAlign: TextAlign.center),
               const SizedBox(height: Sp.lg),
               FilledButton(
                 onPressed: () => context.go('/beat'),
-                child: const Text('Confirm & Close'),
+                child: const Text('Confirm and close'),
               ),
             ],
           ),
@@ -691,9 +691,9 @@ class _ErrorView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
               const SizedBox(height: Sp.md),
-              Text('Something went wrong', style: AppText.title),
+              Text('Could not build the order', style: AppText.title),
               const SizedBox(height: Sp.sm),
               Text(message,
                   style: AppText.label,

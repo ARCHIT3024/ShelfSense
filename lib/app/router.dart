@@ -78,7 +78,7 @@ final appRouter = GoRouter(
   ],
   errorBuilder: (_, state) => Scaffold(
     body: Center(
-      child: Text('Route not found: ${state.error}'),
+      child: Text('That screen does not exist.\n${state.error}'),
     ),
   ),
 );
