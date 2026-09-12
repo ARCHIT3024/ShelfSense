@@ -12,7 +12,7 @@
 /// Also flags any planogram SKU with zero counted facings that wasn''t
 /// explicitly stockout (i.e., genuinely missing) as stockout.
 ///
-/// Returns Result<List<ShelfFact>, Failure> — never throws.
+/// Returns `Result<List<ShelfFact>, Failure>` — never throws.
 library;
 
 import 'package:uuid/uuid.dart';

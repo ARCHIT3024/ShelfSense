@@ -153,9 +153,6 @@ class Sku {
   double get mrpRupees => mrpPaise / 100.0;
 }
 
-extension on double {
-  double truncate() => floorToDouble();
-}
 
 class ShelfFact {
   const ShelfFact({

@@ -1,4 +1,4 @@
-/// Domain failure types. Every service uses Result<T, Failure>.
+/// Domain failure types. Every service uses `Result<T, Failure>`.
 /// No exceptions cross a service boundary.
 sealed class Failure {
   const Failure(this.message);

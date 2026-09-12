@@ -13,7 +13,7 @@
 /// Ordering: only belowPlan and stockout facts generate lines.
 /// Sort: stockouts first, then alphabetical by skuName.
 ///
-/// Returns Result<List<OrderLine>, Failure> — never throws.
+/// Returns `Result<List<OrderLine>, Failure>` — never throws.
 library;
 
 import 'dart:math' as math;
@@ -107,9 +107,13 @@ final class ReorderEngine {
         final aFact = facts.firstWhere((f) => f.skuId == a.skuId);
         final bFact = facts.firstWhere((f) => f.skuId == b.skuId);
         if (aFact.status == ShelfStatus.stockout &&
-            bFact.status != ShelfStatus.stockout) return -1;
+            bFact.status != ShelfStatus.stockout) {
+          return -1;
+        }
         if (bFact.status == ShelfStatus.stockout &&
-            aFact.status != ShelfStatus.stockout) return 1;
+            aFact.status != ShelfStatus.stockout) {
+          return 1;
+        }
         return (a.skuName ?? '').compareTo(b.skuName ?? '');
       });
 

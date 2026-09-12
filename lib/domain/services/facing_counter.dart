@@ -10,7 +10,7 @@
 ///   - A box on multiple shelf rows is still one facing (shelfRow is metadata
 ///     for layout, not for deduplication).
 ///
-/// Returns Result<FacingCount, Failure> — never throws across the boundary.
+/// Returns `Result<FacingCount, Failure>` — never throws across the boundary.
 library;
 
 import '../../core/failures.dart';
