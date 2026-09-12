@@ -14,7 +14,11 @@ enum BoxState { matchedHigh, matchedLow, unmatched, gap }
 BoxState boxStateOf(Detection d) {
   if (d.isGap) return BoxState.gap;
   if (d.skuId == null) return BoxState.unmatched;
-  if (d.matchMethod == 'manual' || (d.matchConfidence ?? 0) >= kMatchHigh) {
+  // Manual tags and OCR-settled size variants are accepted regardless of the
+  // embedding score that preceded them.
+  if (d.matchMethod == 'manual' ||
+      d.matchMethod == 'ocr_tiebreak' ||
+      (d.matchConfidence ?? 0) >= kMatchHigh) {
     return BoxState.matchedHigh;
   }
   return BoxState.matchedLow;

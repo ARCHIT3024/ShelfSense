@@ -14,6 +14,7 @@ import '../../core/logger.dart';
 import '../../core/result.dart';
 import '../../domain/models/models.dart' show RawBox, SkuCandidate;
 import '../../ml/embedder/sku_index.dart' show MatchRoute, routeScore;
+import '../../ml/ocr/grammage_tiebreak.dart';
 import '../../data/db/database.dart';
 
 const _tag = 'CaptureScreen';
@@ -179,6 +180,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     final index = ref.read(skuIndexProvider);
     final thresholds = ref.read(thresholdsProvider);
     final matches = List<SkuCandidate?>.filled(boxes.length, null);
+    // 'embedding' or 'ocr_tiebreak' per box; null ⇒ unmatched.
+    final methods = List<String?>.filled(boxes.length, null);
+    // Top-3 kept only for low-confidence boxes — the OCR tie-break's input.
+    final lowTop3 = <int, List<SkuCandidate>>{};
     if (boxes.isNotEmpty && embedder != null && embedder.isLoaded && !index.isEmpty) {
       if (mounted) setState(() => _processingStage = 'Recognising…');
       final tB = DateTime.now().millisecondsSinceEpoch;
@@ -188,15 +193,18 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           for (var i = 0; i < boxes.length; i++) {
             final v = value[i];
             if (v == null) continue;
-            final top = index.topMatches(v, k: 1);
+            final top = index.topMatches(v, k: 3);
             if (top.isEmpty) continue;
             switch (routeScore(top.first.confidence,
                 high: thresholds.matchHigh, low: thresholds.matchLow)) {
               case MatchRoute.accept:
                 matches[i] = top.first;
+                methods[i] = 'embedding';
                 accepted++;
               case MatchRoute.lowConfidence:
                 matches[i] = top.first;
+                methods[i] = 'embedding';
+                lowTop3[i] = top;
                 low++;
               case MatchRoute.unmatched:
                 break;
@@ -207,6 +215,55 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               'in ${DateTime.now().millisecondsSinceEpoch - tB}ms');
         case Err(:final failure):
           AppLogger.e(_tag, 'Embedder failed — boxes left unmatched', failure);
+      }
+    }
+
+    // Stage C (F-22): a low-confidence match between size variants of one
+    // brand is settled by reading the printed grammage. Amber boxes only,
+    // capped so a rack of ambiguities cannot stall the shutter.
+    final ocr = ref.read(ocrProvider);
+    if (ocr != null && lowTop3.isNotEmpty) {
+      final skus = {
+        for (final s in await (db.select(db.skus)
+              ..where((t) => t.isActive.equals(true)))
+            .get())
+          s.id: s,
+      };
+      var tried = 0, resolved = 0;
+      final tC = DateTime.now().millisecondsSinceEpoch;
+      for (final e in lowTop3.entries) {
+        if (tried >= kOcrMaxBoxesPerPhoto) break;
+        if (!isSizeVariantGroup(e.value, skus)) continue;
+        tried++;
+        if (mounted && tried == 1) {
+          setState(() => _processingStage = 'Reading pack sizes…');
+        }
+        final pick = await resolveByGrammage(
+          ocr: ocr,
+          imagePath: imagePath,
+          box: boxes[e.key],
+          candidates: e.value,
+          skus: skus,
+          cropName: 'ocr_${photoId}_${e.key}',
+        );
+        if (pick == null) continue;
+        // Promote: accepted, and shown green — the rep can still correct it.
+        matches[e.key] = SkuCandidate(
+          skuId: pick.skuId,
+          skuName: pick.skuName,
+          skuCode: pick.skuCode,
+          confidence: pick.confidence > thresholds.matchHigh
+              ? pick.confidence
+              : thresholds.matchHigh,
+          grammageLabel: pick.grammageLabel,
+        );
+        methods[e.key] = 'ocr_tiebreak';
+        resolved++;
+      }
+      if (tried > 0) {
+        AppLogger.i(_tag,
+            'OCR tie-break: $resolved of $tried resolved in '
+            '${DateTime.now().millisecondsSinceEpoch - tC}ms');
       }
     }
 
@@ -226,7 +283,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               detConfidence: box.score,
               skuId: Value(m?.skuId),
               matchConfidence: Value(m?.confidence),
-              matchMethod: Value(m == null ? 'unmatched' : 'embedding'),
+              matchMethod:
+                  Value(m == null ? 'unmatched' : methods[i] ?? 'embedding'),
               createdAt: now,
             ));
       }
