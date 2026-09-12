@@ -265,7 +265,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         ],
       ),
       body: async.when(
-        loading: () => const Center(
+        loading: () => Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
         error: (e, _) => Center(
             child: Text('Could not load visits.\n$e',
@@ -385,7 +385,7 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(Sp.xxl),
         child: Column(

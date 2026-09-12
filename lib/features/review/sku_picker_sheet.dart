@@ -143,14 +143,14 @@ class _SkuPickerSheetState extends State<_SkuPickerSheet> {
                     tooltip: 'Adjust box',
                     onPressed: () =>
                         Navigator.pop(context, const PickAdjust()),
-                    icon: const Icon(Icons.crop_free,
+                    icon: Icon(Icons.crop_free,
                         color: AppColors.textSecondary),
                   ),
                   IconButton(
                     tooltip: 'Delete box',
                     onPressed: () =>
                         Navigator.pop(context, const PickDelete()),
-                    icon: const Icon(Icons.delete_outline,
+                    icon: Icon(Icons.delete_outline,
                         color: AppColors.danger),
                   ),
                 ],
@@ -374,7 +374,7 @@ class _SkuRow extends StatelessWidget {
           Text(_grammage(sku), style: AppText.mono),
           if (!sku.isEnrolled) ...[
             const SizedBox(width: Sp.sm),
-            const Tooltip(
+            Tooltip(
               message: 'Not enrolled yet',
               child: Icon(Icons.visibility_off_outlined,
                   size: 16, color: AppColors.textDisabled),

@@ -250,7 +250,7 @@ class _EnrolmentScreenState extends ConsumerState<EnrolmentScreen> {
         ),
       ),
       body: _busy
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.primary))
           : switch (_step) {
               _Step.details => _DetailsStep(
@@ -405,7 +405,7 @@ class _EnrolmentScreenState extends ConsumerState<EnrolmentScreen> {
                 color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(Radii.card),
               ),
-              child: const Text(
+              child: Text(
                 'Shots are saved. They will be embedded automatically once '
                 'the recogniser model is loaded, and this pack will then be '
                 'recognised on the next shelf photo.',
@@ -553,7 +553,7 @@ class _DetailsStepState extends State<_DetailsStep> {
                       width: 64, height: 64, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: Sp.md),
-                const Expanded(
+                Expanded(
                   child: Text('This pack from the shelf photo becomes shot 1.',
                       style: AppText.body),
                 ),
@@ -565,9 +565,9 @@ class _DetailsStepState extends State<_DetailsStep> {
           child: SegmentedButton<bool>(
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppColors.primary,
-              selectedForegroundColor: AppColors.textPrimary,
+              selectedForegroundColor: AppColors.onPrimary,
               foregroundColor: AppColors.textSecondary,
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.border),
             ),
             segments: const [
               ButtonSegment(value: true, label: Text('New SKU')),
@@ -742,7 +742,7 @@ class _StepHeader extends StatelessWidget {
         children: [
           for (var i = 0; i < labels.length; i++) ...[
             if (i > 0)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: Sp.sm),
                 child: Icon(Icons.arrow_forward,
                     size: 14, color: AppColors.textDisabled),
@@ -834,7 +834,7 @@ class _SlotTile extends StatelessWidget {
               ),
             ),
             if (shot != null && shot!.embedded)
-              const Positioned(
+              Positioned(
                 top: 2,
                 right: 2,
                 child: Icon(Icons.check_circle,

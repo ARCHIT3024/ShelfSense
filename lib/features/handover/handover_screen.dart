@@ -90,7 +90,7 @@ class _HandoverScreenState extends State<HandoverScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Handover')),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.primary))
           : ListView(
               padding: const EdgeInsets.all(Sp.screen),
@@ -140,7 +140,7 @@ class _ServeCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -165,7 +165,7 @@ class _ServeCard extends StatelessWidget {
           if (serving) ...[
             const SizedBox(height: Sp.lg),
             if (url == null)
-              const Text(
+              Text(
                 'Server is up but no Wi-Fi address was found. Join the '
                 'hotspot and toggle again.',
                 style: AppText.body,
@@ -192,7 +192,7 @@ class _ServeCard extends StatelessWidget {
                 style: AppText.mono.copyWith(fontSize: 18),
               ),
               const SizedBox(height: Sp.xs),
-              const Text(
+              Text(
                 'Scan or type this on the laptop, on the same hotspot.',
                 textAlign: TextAlign.center,
                 style: AppText.label,
@@ -245,7 +245,7 @@ class _FileRow extends StatelessWidget {
           IconButton(
             tooltip: 'Share',
             onPressed: onShare,
-            icon: const Icon(Icons.ios_share, color: AppColors.primary),
+            icon: Icon(Icons.ios_share, color: AppColors.primary),
           ),
         ],
       ),

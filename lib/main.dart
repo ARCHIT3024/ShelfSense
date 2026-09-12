@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/di.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
+import 'app/theme_mode.dart';
 import 'data/db/database.dart';
 import 'data/seed/seed_data.dart';
 import 'core/logger.dart';
@@ -17,12 +18,8 @@ void main() async {
   // Portrait lock — enforced in AndroidManifest too, but belt-and-suspenders.
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Status bar: light icons on dark background.
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(
-    statusBarColor: Colors.transparent,
-    systemNavigationBarColor: AppColors.bg,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  // Dark until the persisted appearance mode is read (see ShelfSenseApp).
+  applyPalette(AppPalette.dark);
 
   AppLogger.i('Main', 'App starting');
 
@@ -50,17 +47,30 @@ class ShelfSenseApp extends ConsumerStatefulWidget {
   ConsumerState<ShelfSenseApp> createState() => _ShelfSenseAppState();
 }
 
-class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp> {
+class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Models load lazily and independently (TRD §4.3): start the detector
     // now so the first shutter press finds it ready, but never block the
     // UI or the app start on it. A missing/invalid model just logs.
     _loadThresholds();
+    ref.read(themeModeProvider.notifier).load();
     ref.read(detectorProvider)?.load();
     _loadRecogniser();
   }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// OS light/dark switch — only matters in system mode, harmless otherwise.
+  @override
+  void didChangePlatformBrightness() => setState(() {});
 
   /// Persisted slider values from /diagnostics → live thresholds.
   Future<void> _loadThresholds() async {
@@ -92,10 +102,25 @@ class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp> {
 
   @override
   Widget build(BuildContext context) {
+    final mode = ref.watch(themeModeProvider);
+    // Screens read AppColors/AppText at build time, so the palette must be
+    // current *before* the tree below builds, and the whole tree must
+    // rebuild when it changes — hence the keyed subtree. In system mode this
+    // also tracks the OS switching (platformBrightness is an inherited
+    // dependency of this build).
+    final platform =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final brightness = resolveBrightness(mode, platform);
+    final palette = AppPalette.of(brightness);
+    if (!identical(AppPalette.current, palette)) applyPalette(palette);
+
     return MaterialApp.router(
+      key: ValueKey(brightness),
       title: 'ShelfSense',
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
+      themeMode: mode,
+      theme: buildAppTheme(AppPalette.light),
+      darkTheme: buildAppTheme(AppPalette.dark),
       routerConfig: appRouter,
     );
   }

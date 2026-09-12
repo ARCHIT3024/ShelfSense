@@ -261,8 +261,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
               onTap: () => Navigator.pop(ctx, 'adjust'),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: AppColors.danger),
-              title: const Text('Delete box',
+              leading: Icon(Icons.delete_outline, color: AppColors.danger),
+              title: Text('Delete box',
                   style: TextStyle(color: AppColors.danger)),
               onTap: () => Navigator.pop(ctx, 'delete'),
             ),
@@ -534,7 +534,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
       );
     }
     if (data == null) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppColors.primary));
     }
     final photo = _photo;
@@ -545,10 +545,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.photo_camera_outlined,
+              Icon(Icons.photo_camera_outlined,
                   size: 64, color: AppColors.textDisabled),
               const SizedBox(height: Sp.lg),
-              const Text('No photo yet', style: AppText.heading),
+              Text('No photo yet', style: AppText.heading),
               const SizedBox(height: Sp.xxl),
               FilledButton(
                 onPressed: () => context.pushReplacement('/capture/${widget.visitId}'),
@@ -561,7 +561,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
     }
     final imgSize = _imageSizes[photo.id];
     if (imgSize == null) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppColors.primary));
     }
 
@@ -819,7 +819,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
     final maxListHeight = MediaQuery.of(context).size.height * 0.3;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -842,13 +842,13 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                         const TextSpan(text: ' · '),
                         TextSpan(
                           text: '${counts.matched} matched',
-                          style: const TextStyle(color: AppColors.success),
+                          style: TextStyle(color: AppColors.success),
                         ),
                         if (counts.untagged > 0) ...[
                           const TextSpan(text: ' · '),
                           TextSpan(
                             text: '${counts.untagged} need tagging',
-                            style: const TextStyle(color: AppColors.info),
+                            style: TextStyle(color: AppColors.info),
                           ),
                         ],
                       ]),
@@ -881,7 +881,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                     leading: Container(
                       width: 10,
                       height: 10,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                           color: AppColors.info, shape: BoxShape.circle),
                     ),
                     title: Text('Pack ${i + 1}', style: AppText.body),
@@ -891,7 +891,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                           : 'Row ${d.shelfRow ?? '–'}',
                       style: AppText.label,
                     ),
-                    trailing: const Icon(Icons.zoom_in,
+                    trailing: Icon(Icons.zoom_in,
                         color: AppColors.textSecondary),
                     onTap: () => _jumpTo(d),
                   );

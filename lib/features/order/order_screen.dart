@@ -30,7 +30,7 @@ class OrderScreen extends ConsumerWidget {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text('Order draft', style: AppText.title),
+        title: Text('Order draft', style: AppText.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -197,7 +197,7 @@ class _AddLineSheetState extends ConsumerState<_AddLineSheet> {
                   Sp.screen, Sp.lg, Sp.screen, Sp.sm),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text('Add a line', style: AppText.heading),
                   ),
                   Text('${list.length} SKUs', style: AppText.label),
@@ -473,7 +473,7 @@ Future<int?> _askQuantity(BuildContext context, int current) {
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: AppColors.surface,
-      title: const Text('Quantity', style: AppText.heading),
+      title: Text('Quantity', style: AppText.heading),
       content: TextField(
         controller: controller,
         autofocus: true,
@@ -578,7 +578,7 @@ class _ConfirmedView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, size: 72, color: AppColors.success),
+            Icon(Icons.check_circle, size: 72, color: AppColors.success),
             const SizedBox(height: Sp.md),
             Text('Visit confirmed', style: AppText.title),
             const SizedBox(height: Sp.sm),
@@ -661,7 +661,7 @@ class _EmptyView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.inventory_2_outlined,
+              Icon(Icons.inventory_2_outlined,
                   size: 64, color: AppColors.success),
               const SizedBox(height: Sp.md),
               Text('Shelf matches the plan', style: AppText.title),
@@ -691,7 +691,7 @@ class _ErrorView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+              Icon(Icons.error_outline, size: 48, color: AppColors.danger),
               const SizedBox(height: Sp.md),
               Text('Could not build the order', style: AppText.title),
               const SizedBox(height: Sp.sm),
