@@ -357,7 +357,7 @@ pw.Widget _shelfTable(List<ShelfFact> facts) {
       pw.TableRow(
         decoration: const pw.BoxDecoration(color: _kHeaderBg),
         children: [
-          _headerCell('Shelf — SKU'),
+          _headerCell('Shelf: SKU'),
           _headerCell('Plan', align: pw.TextAlign.right),
           _headerCell('Found', align: pw.TextAlign.right),
           _headerCell('Status'),
@@ -372,7 +372,7 @@ pw.Widget _shelfTable(List<ShelfFact> facts) {
               if ((facts[i].grammageLabel ?? '').isNotEmpty) facts[i].grammageLabel!,
             ].join('  ')),
             _cell(
-              facts[i].status == ShelfStatus.unlisted ? '–' : '${facts[i].targetFacings}',
+              facts[i].status == ShelfStatus.unlisted ? '-' : '${facts[i].targetFacings}',
               align: pw.TextAlign.right,
             ),
             _cell('${facts[i].detectedFacings}',
@@ -400,7 +400,7 @@ pw.Widget _orderTable(List<OrderLine> lines) {
       pw.TableRow(
         decoration: const pw.BoxDecoration(color: _kHeaderBg),
         children: [
-          _headerCell('Order — SKU'),
+          _headerCell('Order: SKU'),
           _headerCell('Grammage'),
           _headerCell('Suggested', align: pw.TextAlign.right),
           _headerCell('Final', align: pw.TextAlign.right),
