@@ -63,6 +63,25 @@ Bugs fixed in that pass: order XLSX header/filename used placeholder `STORE`/`St
 
 Still stubs, deliberately unreachable from the UI: `/diagnostics`, `/benchmark` (L3).
 
+## OCR grammage tie-break (F-22 / T-30) — in code, not yet exercised on a real rack
+
+`lib/ml/ocr/mlkit_ocr_service.dart` (ML Kit Latin, bundled, created on first use via
+`ocrProvider`) + `lib/ml/ocr/grammage_parser.dart` (pure Dart, 16 tests: "450 ml", "1L", "45Oml",
+"1OO g", rejects "MRP 45" / phone numbers / "FC 27" / "500 mg") + `lib/ml/ocr/grammage_tiebreak.dart`.
+
+**When it fires:** only for a box whose recogniser match is *low-confidence* (between the live
+`matchLow` and `matchHigh`) AND whose top-3 candidates contain ≥ 2 SKUs of the same brand (or same
+first word of the name) with different grammage — i.e. Pepsi 450 / 550 / 1000 ml. The crop is
+OCR'd; if exactly one candidate's size is printed on the pack (±5 %, kg≡1000 g, l≡1000 ml) that
+candidate is promoted with `match_method = 'ocr_tiebreak'` and confidence ≥ `matchHigh`, so it
+renders green and counts as a facing. Zero or several matches ⇒ the amber match is left alone —
+it never guesses. Never runs on green or blue boxes; capped at 10 boxes per photo
+(`kOcrMaxBoxesPerPhoto`). Capture overlay says "Reading pack sizes…" while it runs.
+
+**Verify:** `adb logcat -s flutter | grep -E "MlKitOcr|OcrTiebreak|OCR tie-break"` — per-crop text
++ ms, the sizes parsed, and the pick. Not yet tested against a physical pack; the first real
+run is the T-31 bug bash with size variants on the rack.
+
 ## Detector — LIVE on device (12 Sep 23:30)
 
 A's `detector_int8.tflite` is bundled and running. First real shelf photo on the iQOO 15:
