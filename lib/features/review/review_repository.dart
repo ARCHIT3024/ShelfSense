@@ -11,14 +11,16 @@ const _tag = 'ReviewRepo';
 /// (06_APP_FLOW.md §`/review`).
 enum BoxState { matchedHigh, matchedLow, unmatched, gap }
 
-BoxState boxStateOf(Detection d) {
+/// [acceptThreshold] defaults to the compiled constant; pass the live
+/// Diagnostics value so /review agrees with what the pipeline accepted.
+BoxState boxStateOf(Detection d, {double acceptThreshold = kMatchHigh}) {
   if (d.isGap) return BoxState.gap;
   if (d.skuId == null) return BoxState.unmatched;
   // Manual tags and OCR-settled size variants are accepted regardless of the
   // embedding score that preceded them.
   if (d.matchMethod == 'manual' ||
       d.matchMethod == 'ocr_tiebreak' ||
-      (d.matchConfidence ?? 0) >= kMatchHigh) {
+      (d.matchConfidence ?? 0) >= acceptThreshold) {
     return BoxState.matchedHigh;
   }
   return BoxState.matchedLow;

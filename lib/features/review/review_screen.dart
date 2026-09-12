@@ -712,7 +712,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
   Widget _positionedBox(
       Detection d, int i, int n, double dw, double dh) {
     final r = _scaleRect(Rect.fromLTRB(d.x1, d.y1, d.x2, d.y2), dw, dh);
-    final state = boxStateOf(d);
+    final state = boxStateOf(d,
+        acceptThreshold: ref.read(thresholdsProvider).matchHigh);
     final sku = _data!.skuById(d.skuId);
     // Stagger: each box's window is shifted by its index, total ≈ 250 ms.
     final start = n <= 1 ? 0.0 : (i / n) * 0.6;
