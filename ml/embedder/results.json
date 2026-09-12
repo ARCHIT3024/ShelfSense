@@ -5,6 +5,8 @@
   "DEGREE-250ML",
   "DOVE-100G",
   "DOVE-250ML",
+  "IQOO-1N",
+  "IQOO-1N-2",
   "NIVEA-500G",
   "OLAY-200G-2",
   "OLD-150ML",
@@ -12,23 +14,35 @@
   "PEPSI-450ML",
   "PEPSI-550ML",
   "RED-250ML",
+  "THUMSU-80ML",
   "TONE-200G"
  ],
- "train": 81,
- "held_out": 26,
+ "train": 103,
+ "held_out": 32,
  "epochs": 60,
- "train_seconds": 34,
+ "train_seconds": 39,
  "keras": {
-  "top1": 1.0,
-  "same": 0.8557188510894775,
-  "other": 0.4231317341327667
+  "top1": 0.9375,
+  "same": 0.8412110805511475,
+  "other": 0.48671555519104004
  },
  "fp16": {
-  "top1": 1.0,
-  "same": 0.8557997941970825,
-  "other": 0.4231202304363251,
+  "top1": 0.9375,
+  "same": 0.841349720954895,
+  "other": 0.4870135486125946,
   "bytes": 2044464,
-  "confusions": []
+  "confusions": [
+   [
+    "IQOO-1N-2",
+    "IQOO-1N",
+    0.89687180519104
+   ],
+   [
+    "OLD-150ML",
+    "THUMSU-80ML",
+    0.48225831985473633
+   ]
+  ]
  },
  "int8": {
   "error": "failed to create XNNPACK runtimeNode number 117 (TfLiteXNNPackDelegate) failed to prepare.",

@@ -18,6 +18,11 @@ abstract class EmbedderService {
   /// True once [load] succeeded; callers skip recognition (boxes stay
   /// unmatched) rather than wait when this is false.
   bool get isLoaded;
+
+  /// Identifies the loaded weights (asset name + byte length). Vectors from
+  /// a different model live in a different space, so stored embeddings must
+  /// be rebuilt whenever this changes.
+  String? get fingerprint;
   Future<Result<void, Failure>> load();
   Future<Result<List<double>, Failure>> embed(String cropImagePath);
 

@@ -66,6 +66,36 @@ class CatalogueScreen extends ConsumerStatefulWidget {
 class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
   String _query = '';
 
+  /// Retires a mistaken or duplicate SKU: it leaves the catalogue, the
+  /// picker and the recogniser index; nothing is deleted, so history stays
+  /// intact. Long-press a row to reach this.
+  Future<void> _confirmDeactivate(SkusData sku) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Remove ${sku.name}?'),
+        content: const Text(
+            'It will no longer be listed or recognised. Past visits keep it.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove',
+                  style: TextStyle(color: AppColors.danger))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final db = ref.read(dbProvider);
+    await (db.update(db.skus)..where((t) => t.id.equals(sku.id)))
+        .write(const SkusCompanion(isActive: drift.Value(false)));
+    await (db.update(db.skuEmbeddings)..where((t) => t.skuId.equals(sku.id)))
+        .write(const SkuEmbeddingsCompanion(isActive: drift.Value(false)));
+    await ref.read(skuIndexProvider).refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(_catalogueProvider);
@@ -143,6 +173,7 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
                     row: visible[i],
                     onTap: () => context
                         .push('/enrol', extra: {'skuId': visible[i].sku.id}),
+                    onLongPress: () => _confirmDeactivate(visible[i].sku),
                   ),
                 ),
         ),
@@ -152,15 +183,18 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
 }
 
 class _SkuTile extends StatelessWidget {
-  const _SkuTile({required this.row, required this.onTap});
+  const _SkuTile(
+      {required this.row, required this.onTap, required this.onLongPress});
   final _CatalogueRow row;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final s = row.sku;
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       minTileHeight: Tap.counter,
       title: Text(s.name, style: AppText.body),
       subtitle: Text(

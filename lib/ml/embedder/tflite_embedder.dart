@@ -71,6 +71,8 @@ class TfliteEmbedder extends EmbedderService {
     'assets/models/embedder_fp32.tflite',
   ];
   String? loadedAsset;
+  @override
+  String? fingerprint;
 
   Interpreter? _interpreter;
   EmbedderInfo? _info;
@@ -97,6 +99,7 @@ class TfliteEmbedder extends EmbedderService {
       try {
         bytes = (await rootBundle.load(path)).buffer.asUint8List();
         loadedAsset = path;
+        fingerprint = '$path:${bytes.length}';
         break;
       } catch (_) {
         // not bundled — try the next candidate

@@ -221,6 +221,18 @@ class EnrolmentRepository {
   Future<int> backfillPendingEmbeddings() async {
     final e = embedder;
     if (e == null || !e.isLoaded) return 0;
+
+    // A retrained model is a new vector space: drop every stored vector and
+    // re-embed all shots, otherwise old rows would silently mis-match.
+    final fp = e.fingerprint;
+    final stored = await db.getSetting('embedder_fingerprint');
+    if (fp != null && stored != fp) {
+      final n = await db.delete(db.skuEmbeddings).go();
+      AppLogger.i(_tag,
+          'Embedder changed (${stored ?? 'none'} → $fp): dropped $n vectors');
+      await db.setSetting('embedder_fingerprint', fp);
+    }
+
     var done = 0;
     for (final sku in await activeSkus()) {
       for (final shot in await shots(sku.id)) {
