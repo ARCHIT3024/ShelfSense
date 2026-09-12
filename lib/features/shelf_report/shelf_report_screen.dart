@@ -31,7 +31,7 @@ class ShelfReportScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Back to review',
             icon: const Icon(Icons.grid_view_outlined),
-            onPressed: () => context.go('/review/$visitId'),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/review/$visitId'),
           ),
         ],
       ),
@@ -59,7 +59,7 @@ class ShelfReportScreen extends ConsumerWidget {
                       itemCount: r.facts.length,
                       itemBuilder: (_, i) => _FactRow(
                         fact: r.facts[i],
-                        onTap: () => context.go(
+                        onTap: () => context.push(
                           '/review/$visitId?sku=${r.facts[i].skuId}',
                         ),
                       ),
@@ -83,7 +83,7 @@ class ShelfReportScreen extends ConsumerWidget {
                     // The draft is cached per visit; force it to rebuild
                     // from the facts we just computed.
                     ref.invalidate(orderProvider(visitId));
-                    context.go('/order/$visitId');
+                    context.push('/order/$visitId');
                   }
                 : null,
             child: const Text('Continue to order'),

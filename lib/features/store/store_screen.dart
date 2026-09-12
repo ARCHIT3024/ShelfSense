@@ -82,7 +82,7 @@ class StoreScreen extends ConsumerWidget {
           beatId: store.beatId,
           startedAt: now,
         ));
-    if (context.mounted) context.go('/capture/$visitId');
+    if (context.mounted) context.push('/capture/$visitId');
   }
 }
 

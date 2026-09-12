@@ -472,7 +472,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
             IconButton(
               tooltip: 'Add another photo',
               icon: const Icon(Icons.add_a_photo_outlined),
-              onPressed: () => context.go('/capture/${widget.visitId}'),
+              onPressed: () => context.pushReplacement('/capture/${widget.visitId}'),
             ),
           ],
         ],
@@ -494,7 +494,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
                   child: FilledButton(
                     onPressed: data == null
                         ? null
-                        : () => context.go('/shelf/${widget.visitId}'),
+                        : () => context.push('/shelf/${widget.visitId}'),
                     child: Text(counts.untagged > 0
                         ? 'Continue (${counts.untagged} untagged)'
                         : 'Continue'),
@@ -533,7 +533,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen>
               const Text('No photo yet', style: AppText.heading),
               const SizedBox(height: Sp.xxl),
               FilledButton(
-                onPressed: () => context.go('/capture/${widget.visitId}'),
+                onPressed: () => context.pushReplacement('/capture/${widget.visitId}'),
                 child: const Text('Photograph the shelf'),
               ),
             ],

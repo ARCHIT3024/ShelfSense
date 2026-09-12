@@ -5,7 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~18:30 IST (R2, after C's merge). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~18:50 IST (end of R2). Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -66,7 +66,16 @@ Full path driven on the iQOO 15: `/beat` → store → **Start Visit** → shutt
 boxes) → tag one → **Continue** → `/shelf` **(still the stub screen)** → **Continue** → `/order`
 (C's real screen: 8 SKUs drafted by ReorderEngine from the planogram diff, steppers step by one
 case, running total) → **Confirm** → "Visit confirmed · 8 lines" with Share XLSX / Share CSV.
-**L0 is demoable except `/shelf`** — that screen is the one remaining gap between review and order.
+**Update 12 Sep 18:50: L0 is fully demoable.** `/shelf` built (T-18 UI), `/export` is a real
+beat export (per-visit XLSX/CSV + Generate all → one share sheet), `/beat` shows real
+Done/Resume/Pending pills and the header numbers, and navigation uses push so the system back
+button walks back through the flow instead of exiting the app. Full pass re-run after each fix.
+
+Bugs fixed in that pass: order XLSX header/filename used placeholder `STORE`/`Store`/`Beat`
+(now resolved from the visit); beat pills were hard-coded `Pending`; programmatic zoom on
+`/review` overshot the viewport; `/shelf` rows collapsed (Row+stretch in a list).
+
+Still stubs, deliberately unreachable from the UI: `/diagnostics`, `/benchmark` (L3).
 
 ## Repo / git state
 
@@ -120,9 +129,8 @@ whoever has the phone (see compliance gaps above).**
 
 ### Scaffolded but not implemented (stub screens, each literally says what's next)
 
-- `lib/features/shelf_report/shelf_report_screen.dart` → **T-18**
 - `lib/features/order/order_screen.dart` → **T-19** (steppers + wiring to `xlsx_builder`/`csv_builder`)
-- `lib/features/export/export_screen.dart` → has a working XLSX/CSV smoke-test button (T-08); still needs the real beat-level export flow + PDF + local HTTP handover (**T-19/T-30**)
+- `lib/features/export/export_screen.dart` → beat export done (XLSX/CSV); PDF (**T-29**) + local HTTP handover (**T-30**) still to add
 - `lib/features/diagnostics/diagnostics_screen.dart` → threshold sliders, ties to **T-25**
 - `lib/features/benchmark/benchmark_screen.dart` → **T-30/T-21** (on-device vs cloud comparison)
 

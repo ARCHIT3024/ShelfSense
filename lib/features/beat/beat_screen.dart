@@ -130,10 +130,14 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
                     return _StoreRow(
                       store: s,
                       status: status,
-                      // A draft resumes where the rep left off.
-                      onTap: () => status == 'draft'
-                          ? context.go('/review/${data.latestVisit[s.id]!.id}')
-                          : context.go('/store/${s.id}'),
+                      // A draft resumes where the rep left off. Reload on
+                      // return so pills and the header reflect the visit.
+                      onTap: () async {
+                        await context.push(status == 'draft'
+                            ? '/review/${data.latestVisit[s.id]!.id}'
+                            : '/store/${s.id}');
+                        if (mounted) _reload();
+                      },
                     );
                   },
                 ),
@@ -143,7 +147,7 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/export'),
+        onPressed: () => context.push('/export'),
         icon: const Icon(Icons.file_download_outlined),
         label: const Text('Export Beat'),
       ),

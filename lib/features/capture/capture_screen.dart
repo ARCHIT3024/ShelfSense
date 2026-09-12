@@ -128,7 +128,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           _lastLatencyMs = latency;
         });
         // Navigate to review
-        context.go('/review/${widget.visitId}');
+        context.pushReplacement('/review/${widget.visitId}');
       }
     } catch (e) {
       AppLogger.e(_tag, 'Shutter error', e);
@@ -267,7 +267,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                       // Close
                       _ArcButton(
                         icon: Icons.close,
-                        onTap: () => context.pop(),
+                        onTap: () => context.canPop() ? context.pop() : context.go('/beat'),
                         size: Tap.min,
                       ),
                     ],
