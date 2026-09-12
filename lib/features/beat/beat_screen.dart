@@ -128,7 +128,7 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: Sp.screen, vertical: Sp.md),
                   itemCount: stores.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: Sp.sm),
+                  separatorBuilder: (_, _) => const SizedBox(height: Sp.sm),
                   itemBuilder: (context, i) {
                     final s = stores[i];
                     final status = data.statusOf(s);
@@ -295,9 +295,9 @@ class _StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: Sp.md, vertical: Sp.xs),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(Radii.pill),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(label,
           style: TextStyle(

@@ -20,7 +20,7 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/beat',
-      builder: (_, __) => const BeatScreen(),
+      builder: (_, _) => const BeatScreen(),
     ),
     GoRoute(
       path: '/store/:storeId',
@@ -62,7 +62,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/export',
-      builder: (_, __) => const ExportScreen(),
+      builder: (_, _) => const ExportScreen(),
     ),
     GoRoute(
       path: '/catalogue',
@@ -74,11 +74,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/benchmark',
-      builder: (_, __) => const BenchmarkScreen(),
+      builder: (_, _) => const BenchmarkScreen(),
     ),
     GoRoute(
       path: '/diagnostics',
-      builder: (_, __) => const DiagnosticsScreen(),
+      builder: (_, _) => const DiagnosticsScreen(),
     ),
   ],
   errorBuilder: (_, state) => Scaffold(

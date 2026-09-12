@@ -8,7 +8,7 @@
 ///  - Empty-lines guard → ExportFailed (never throws)
 ///  - Happy path → Ok with non-empty Uint8List
 ///  - XLSX/ZIP magic bytes (PK\x03\x04)
-///  - Output type is Uint8List (not plain List<int>)
+///  - Output type is Uint8List (not plain `List<int>`)
 ///  - Multi-row output is larger than single-row output
 ///  - Override flag reflected correctly in OrderLine
 ///  - Smoke test with real-world-like data

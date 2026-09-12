@@ -112,7 +112,7 @@ class TfliteDetector implements DetectorService {
 
     // Find the model bytes first so a missing file fails fast and quietly.
     Uint8List? bytes;
-    for (final path in [if (assetPath != null) assetPath!, ...kCandidateAssets]) {
+    for (final path in [?assetPath, ...kCandidateAssets]) {
       try {
         bytes = (await rootBundle.load(path)).buffer.asUint8List();
         loadedAsset = path;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+// `qr` is pulled in transitively by `printing`; no direct pubspec entry by design.
+// ignore: depend_on_referenced_packages
 import 'package:qr/qr.dart';
 import 'package:share_plus/share_plus.dart';
 

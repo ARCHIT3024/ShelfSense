@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 enum LogLevel { debug, info, warn, error }
 
 class AppLogger {
-  static final _logs = <_LogEntry>[];
+  static final _logs = <LogEntry>[];
   static const _maxEntries = 500;
 
   static void d(String tag, String msg) => _log(LogLevel.debug, tag, msg);
@@ -15,7 +15,7 @@ class AppLogger {
       _log(LogLevel.error, tag, err != null ? '$msg — $err' : msg);
 
   static void _log(LogLevel level, String tag, String msg) {
-    final entry = _LogEntry(
+    final entry = LogEntry(
       level: level,
       tag: tag,
       message: msg,
@@ -31,7 +31,7 @@ class AppLogger {
   }
 
   /// Returns a copy of the log buffer, newest first, for the Diagnostics screen.
-  static List<_LogEntry> dump() => List.unmodifiable(_logs.reversed);
+  static List<LogEntry> dump() => List.unmodifiable(_logs.reversed);
 
   /// Export as plain text for log dump button.
   static String dumpText() => _logs
@@ -40,8 +40,8 @@ class AppLogger {
       .join('\n');
 }
 
-class _LogEntry {
-  const _LogEntry({
+class LogEntry {
+  const LogEntry({
     required this.level,
     required this.tag,
     required this.message,

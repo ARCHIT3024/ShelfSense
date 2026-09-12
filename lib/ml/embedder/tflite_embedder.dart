@@ -93,7 +93,7 @@ class TfliteEmbedder extends EmbedderService {
     final t0 = DateTime.now().millisecondsSinceEpoch;
 
     Uint8List? bytes;
-    for (final path in [if (assetPath != null) assetPath!, ...kCandidateAssets]) {
+    for (final path in [?assetPath, ...kCandidateAssets]) {
       try {
         bytes = (await rootBundle.load(path)).buffer.asUint8List();
         loadedAsset = path;
