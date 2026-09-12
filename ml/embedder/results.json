@@ -1,0 +1,37 @@
+{
+ "classes": [
+  "CADBUR-200G",
+  "COCA-40ML",
+  "DEGREE-250ML",
+  "DOVE-100G",
+  "DOVE-250ML",
+  "NIVEA-500G",
+  "OLAY-200G-2",
+  "OLD-150ML",
+  "PEPSI-1000ML",
+  "PEPSI-450ML",
+  "PEPSI-550ML",
+  "RED-250ML",
+  "TONE-200G"
+ ],
+ "train": 81,
+ "held_out": 26,
+ "epochs": 60,
+ "train_seconds": 34,
+ "keras": {
+  "top1": 1.0,
+  "same": 0.8557188510894775,
+  "other": 0.4231317341327667
+ },
+ "fp16": {
+  "top1": 1.0,
+  "same": 0.8557997941970825,
+  "other": 0.4231202304363251,
+  "bytes": 2044464,
+  "confusions": []
+ },
+ "int8": {
+  "error": "failed to create XNNPACK runtimeNode number 117 (TfLiteXNNPackDelegate) failed to prepare.",
+  "kept": false
+ }
+}

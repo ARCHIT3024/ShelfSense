@@ -51,3 +51,7 @@ ml/**/datasets/
 ml/**/runs/
 *.pt
 !ml/pack_finder/models/pack_finder_yolo11n_best.pt
+
+# Embedder training venv / scratch (ml/embedder)
+ml/embedder/.venv/
+ml/embedder/_int8_candidate.tflite
