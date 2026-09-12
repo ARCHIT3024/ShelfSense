@@ -1,4 +1,4 @@
-﻿/// On-device CSV generation — T-09.
+/// On-device CSV generation — T-09.
 ///
 /// Companion to xlsx_builder.dart. Plain Dart, zero extra packages —
 /// CSV encoding is simple enough not to need a dependency, and this keeps
@@ -57,7 +57,7 @@ Result<Uint8List, Failure> buildOrderCsvBytes({
   }
   try {
     final csv = buildOrderCsvString(lines);
-    return Ok(utf8.encode(csv) as Uint8List);
+    return Ok(Uint8List.fromList(utf8.encode(csv)));
   } catch (e, st) {
     AppLogger.e(_tag, 'CSV bytes build failed', e);
     return Err(ExportFailed('CSV build failed: $e\n$st'));
