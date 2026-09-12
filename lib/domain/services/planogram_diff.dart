@@ -1,4 +1,4 @@
-﻿/// PlanogramDiff — T-11.
+/// PlanogramDiff — T-11.
 ///
 /// Pure Dart service. Compares actual shelf facings (from FacingCounter) against
 /// the planogram target and produces a [ShelfFact] per SKU.
@@ -17,9 +17,9 @@ library;
 
 import 'package:uuid/uuid.dart';
 
-import '../core/failures.dart';
-import '../core/result.dart';
-import '../domain/models/models.dart';
+import '../../core/failures.dart';
+import '../../core/result.dart';
+import '../models/models.dart';
 
 final class PlanogramDiff {
   const PlanogramDiff();

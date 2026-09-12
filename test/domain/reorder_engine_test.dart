@@ -1,10 +1,10 @@
-/// Unit tests for ReorderEngine — T-12.
+﻿/// Unit tests for ReorderEngine — T-12.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shelfsense/core/result.dart';
 import 'package:shelfsense/domain/models/models.dart';
-import 'package:shelfsense/domain/reorder_engine.dart';
+import 'package:shelfsense/domain/services/reorder_engine.dart';
 
 void main() {
   const engine = ReorderEngine();
@@ -238,4 +238,76 @@ void main() {
     // BIS is stockout → should be first
     expect(lines.first.skuId, 'BIS');
   });
+
+  // ── Trailing history floor (TRD §5.4) ────────────────────────────────────
+
+  group('trailing history floor', () {
+    test('trailing x 0.8 floor used when it exceeds base deficit', () {
+      // deficit = 4 - 2 = 2, trailing = 20  -> floor = 20 x 0.8 = 16
+      // ceil(16/4)*4 = 16 -> suggestedQty = 16
+      final result = engine.suggest(
+        facts: [fact(skuId: 'A', status: ShelfStatus.belowPlan, detected: 2, target: 4)],
+        skus: [sku(id: 'A', code: 'A', name: 'A', caseSize: 4)],
+        visitId: visitId,
+        trailingQty: {'A': 20},
+      );
+      expect(result.valueOrNull!.single.suggestedQty, 8); // cap(target*2=8) < trailing floor(16) -> 8
+    });
+
+    test('base deficit used when it exceeds trailing x 0.8', () {
+      // deficit = 4, trailing = 2  -> 2x0.8=1.6; base 4 wins  -> qty=4
+      final result = engine.suggest(
+        facts: [fact(skuId: 'A', status: ShelfStatus.stockout, detected: 0, target: 4)],
+        skus: [sku(id: 'A', code: 'A', name: 'A', caseSize: 4)],
+        visitId: visitId,
+        trailingQty: {'A': 2},
+      );
+      expect(result.valueOrNull!.single.suggestedQty, 4);
+    });
+
+    test('no trailingQty entry treats trailing as 0 and base wins', () {
+      final result = engine.suggest(
+        facts: [fact(skuId: 'A', status: ShelfStatus.stockout, detected: 0, target: 4)],
+        skus: [sku(id: 'A', code: 'A', name: 'A', caseSize: 4)],
+        visitId: visitId,
+      );
+      expect(result.valueOrNull!.single.suggestedQty, 4);
+    });
+  });
+
+  // ── Absurd-qty cap: min(suggested, target x 2) (TRD §5.4) ───────────────
+
+  group('absurd-quantity cap', () {
+    test('cap at target_facings x 2 when trailing is huge', () {
+      // trailing=200 -> 200x0.8=160; ceil(160/4)*4=160; cap=4x2=8 -> qty<=8
+      final result = engine.suggest(
+        facts: [fact(skuId: 'A', status: ShelfStatus.belowPlan, detected: 2, target: 4)],
+        skus: [sku(id: 'A', code: 'A', name: 'A', caseSize: 4)],
+        visitId: visitId,
+        trailingQty: {'A': 200},
+      );
+      expect(result.valueOrNull!.single.suggestedQty, lessThanOrEqualTo(8));
+    });
+
+    test('minimum is always one full case even under a tight cap', () {
+      // target=1, cap=2; caseSize=4 -> at least 4 units (one case)
+      final result = engine.suggest(
+        facts: [fact(skuId: 'A', status: ShelfStatus.stockout, detected: 0, target: 1)],
+        skus: [sku(id: 'A', code: 'A', name: 'A', caseSize: 4)],
+        visitId: visitId,
+      );
+      expect(result.valueOrNull!.single.suggestedQty, greaterThanOrEqualTo(4));
+    });
+  });
+
+  // ── medianOrZero helper ────────────────────────────────────────────────────
+
+  group('medianOrZero', () {
+    test('empty list -> 0', () => expect(medianOrZero([]), 0));
+    test('single value -> that value', () => expect(medianOrZero([10]), 10));
+    test('odd length -> middle element', () => expect(medianOrZero([3, 1, 2]), 2));
+    test('even length -> mean of two middles', () => expect(medianOrZero([1, 3, 5, 7]), 4));
+    test('unsorted input sorted before median', () => expect(medianOrZero([9, 1, 5]), 5));
+  });
 }
+

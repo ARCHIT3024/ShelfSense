@@ -1,4 +1,4 @@
-﻿/// FacingCounter — T-10.
+/// FacingCounter — T-10.
 ///
 /// Pure Dart service. Takes a list of [MatchedBox] produced by A's detector
 /// pipeline and counts the number of facings (visible pack-fronts) per SKU.
@@ -13,9 +13,9 @@
 /// Returns Result<FacingCount, Failure> — never throws across the boundary.
 library;
 
-import '../core/failures.dart';
-import '../core/result.dart';
-import '../domain/models/models.dart';
+import '../../core/failures.dart';
+import '../../core/result.dart';
+import '../models/models.dart';
 
 /// Output of [FacingCounter.count].
 class FacingCount {

@@ -4,7 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shelfsense/core/failures.dart';
 import 'package:shelfsense/core/result.dart';
-import 'package:shelfsense/domain/facing_counter.dart';
+import 'package:shelfsense/domain/services/facing_counter.dart';
 import 'package:shelfsense/domain/models/models.dart';
 
 void main() {

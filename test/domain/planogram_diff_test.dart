@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shelfsense/core/failures.dart';
 import 'package:shelfsense/core/result.dart';
 import 'package:shelfsense/domain/models/models.dart';
-import 'package:shelfsense/domain/planogram_diff.dart';
+import 'package:shelfsense/domain/services/planogram_diff.dart';
 
 void main() {
   const diff = PlanogramDiff();
