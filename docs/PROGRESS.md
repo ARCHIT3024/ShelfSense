@@ -5,7 +5,7 @@ work session (or whenever you hand off) so the next session can pick up cold. It
 never replaces, `00_START_HERE.md` and the numbered doc set — read those for the *why*; this file
 is only the *where are we right now*.
 
-Last updated: 2026-09-12, ~20:40 IST (G3). Tag `L0` = 0ed84fc. Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
+Last updated: 2026-09-12, ~23:35 IST (R3). Tag `L0` = 0ed84fc. Detector live. Event: iQOO City Battle Chennai, build window Sat 12 Sep 11:00 → Sun 13 Sep 06:30 hard
 feature freeze. **This means we are inside the live build window — check the clock against
 `docs/Work Flow.md` §2/§6 immediately on resume and figure out which Red/Green block we're
 actually in.**
@@ -63,7 +63,25 @@ Bugs fixed in that pass: order XLSX header/filename used placeholder `STORE`/`St
 
 Still stubs, deliberately unreachable from the UI: `/diagnostics`, `/benchmark` (L3).
 
-## Detector integration (T-13 done in code, waiting on T-12's model)
+## Detector — LIVE on device (12 Sep 23:30)
+
+A's `detector_int8.tflite` is bundled and running. First real shelf photo on the iQOO 15:
+**`100 boxes in 439ms (pre 404 · infer 32 · post 3)`, pipeline 688 ms end-to-end, GPU delegate.**
+Model load 1.8 s at app start (OpenCL shader compile, once). Preprocess (pure-Dart JPEG decode +
+letterbox in an isolate) is now the dominant cost — capture at a lower still resolution if it
+matters.
+
+Three things had to change to get here, all committed:
+1. Input is **NCHW** `[1,3,640,640]` (LiteRT exporter keeps PyTorch layout) — loader accepts both.
+2. Interpreter I/O must be raw `Uint8List`/`ByteBuffer` — nested Dart lists take 40+ s to convert.
+3. **`IsolateInterpreter` must not be used** (it re-runs `allocateTensors` per call and breaks the
+   delegate's memory plan → "Input tensor N lacks data" + a hang), and the bundled LiteRT 1.4.0
+   runtime rejects the model anyway. `android/app/build.gradle.kts` forces **LiteRT 1.4.2** — the
+   newest that still ships the classic C API (`libtensorflowlite_jni.so`); 2.x renames it to
+   `libLiteRt.so` with a different API and the FFI can't bind it. Inference runs on the main isolate
+   (32 ms, behind the shutter overlay). `kDetMaxBoxes` raised 100 → 300.
+
+## Detector integration notes (kept for reference)
 
 `lib/ml/detector/tflite_detector.dart` implements `DetectorService`; `yolo_decode.dart` holds
 the pure letterbox/decode/NMS (unit-tested, `test/ml/`). `detectorProvider` creates it and

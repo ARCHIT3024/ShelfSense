@@ -50,3 +50,15 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+
+// tflite_flutter 0.12.1 pins LiteRT 1.4.0, which fails on A's model
+// ("Input tensor 207 lacks data"). 1.4.2 is the newest runtime that still
+// ships the classic C API (libtensorflowlite_jni.so) the Dart FFI binds;
+// 2.x replaces it with libLiteRt.so and a different API.
+configurations.all {
+    resolutionStrategy.force(
+        "com.google.ai.edge.litert:litert:1.4.2",
+        "com.google.ai.edge.litert:litert-gpu:1.4.2",
+    )
+}

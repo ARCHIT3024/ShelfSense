@@ -5,7 +5,7 @@ library;
 // Detector
 const double kDetConfThreshold = 0.35;
 const double kDetNmsIou = 0.50;
-const int kDetMaxBoxes = 100;
+const int kDetMaxBoxes = 300; // dense supermarket shelves exceed 100; NMS cost is trivial
 
 // Matcher
 const double kMatchHigh = 0.72; // accept

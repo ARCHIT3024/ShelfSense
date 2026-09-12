@@ -3,8 +3,12 @@
 /// Load order: GPU delegate → XNNPACK → plain CPU. On load it dumps every
 /// input/output tensor (shape, type, quantisation) to the log and asserts
 /// the contract in TRD §4.2 *before* any decode logic runs. Preprocessing
-/// (decode + EXIF bake + letterbox + quantise) happens in an isolate; the
-/// interpreter runs on its own isolate too, so the UI never stalls.
+/// (decode + EXIF bake + letterbox + quantise) happens in a compute isolate.
+/// Inference itself runs on the main isolate: tflite_flutter's
+/// IsolateInterpreter re-allocates tensors on every call (Interpreter
+/// .fromAddress → allocateTensors), which breaks the XNNPACK memory plan
+/// ("Input tensor N lacks data") and hangs the caller. A YOLO11n INT8
+/// invoke is tens of ms on this SoC, behind the shutter overlay anyway.
 ///
 /// Detect on a captured still only — never on the preview stream.
 library;
@@ -88,7 +92,6 @@ class TfliteDetector implements DetectorService {
   DetectorConfig config;
 
   Interpreter? _interpreter;
-  IsolateInterpreter? _isolate;
   DetectorInfo? _info;
   Tensor? _inT, _outT;
 
@@ -125,15 +128,13 @@ class TfliteDetector implements DetectorService {
 
     Interpreter? interp;
     var delegateName = 'cpu';
-    for (final attempt in ['gpu', 'xnnpack', 'cpu']) {
+    // GPU first; otherwise plain options — the TFLite runtime applies its
+    // own XNNPACK delegate for CPU by default (adding it explicitly on top
+    // double-applies it).
+    for (final attempt in ['gpu', 'cpu']) {
       try {
         final opts = InterpreterOptions()..threads = 4;
-        switch (attempt) {
-          case 'gpu':
-            opts.addDelegate(GpuDelegateV2());
-          case 'xnnpack':
-            opts.addDelegate(XNNPackDelegate());
-        }
+        if (attempt == 'gpu') opts.addDelegate(GpuDelegateV2());
         interp = Interpreter.fromBuffer(bytes, options: opts);
         delegateName = attempt;
         break;
@@ -147,9 +148,7 @@ class TfliteDetector implements DetectorService {
     // The GPU delegate can "succeed" at creation yet be dropped at prepare
     // time (per-channel INT8 is unsupported); the tflite runtime logs that
     // itself. Label honestly: INT8 models run on XNNPACK/CPU.
-    if (delegateName == 'gpu' && loadedAsset!.contains('int8')) {
-      delegateName = 'xnnpack (gpu rejected int8)';
-    }
+    if (delegateName == 'cpu') delegateName = 'cpu/xnnpack';
     AppLogger.i(_tag, 'Using $loadedAsset');
 
     // ---- Dump + assert the tensor contract before anything else --------
@@ -198,7 +197,6 @@ class TfliteDetector implements DetectorService {
       _interpreter = interp;
       _inT = inT;
       _outT = outT;
-      _isolate = await IsolateInterpreter.create(address: interp.address);
       _info = DetectorInfo(
         inputSize: nchw ? ish[2] : ish[1],
         inputNchw: nchw,
@@ -223,9 +221,9 @@ class TfliteDetector implements DetectorService {
   @override
   Future<Result<List<RawBox>, Failure>> detect(String imagePath) async {
     final info = _info;
-    final iso = _isolate;
+    final interp = _interpreter;
     final inT = _inT, outT = _outT;
-    if (info == null || iso == null || inT == null || outT == null) {
+    if (info == null || interp == null || inT == null || outT == null) {
       return const Err(DetectorNotLoaded());
     }
     final t0 = DateTime.now().millisecondsSinceEpoch;
@@ -244,46 +242,38 @@ class TfliteDetector implements DetectorService {
         ),
       );
 
-      // 2. Inference on the interpreter isolate.
+      // 2. Inference. Raw bytes in and out —
+      //    tflite_flutter memcpys Uint8List/ByteBuffer, but converts nested
+      //    Dart lists element by element (tens of seconds for 640×640×3).
       final outLen = info.channels * info.anchors;
-      final Object input;
-      final Object output;
-      final inShape = info.inputNchw
-          ? [1, 3, info.inputSize, info.inputSize]
-          : [1, info.inputSize, info.inputSize, 3];
-      if (inT.type == TensorType.float32) {
-        input = pre.floats!.reshape(inShape);
-      } else {
-        input = pre.bytes!.reshape(inShape);
-      }
-      if (outT.type == TensorType.float32) {
-        output = Float32List(outLen).reshape(info.outputShape);
-      } else {
-        output = (outT.type == TensorType.int8
-                ? Int8List(outLen)
-                : Uint8List(outLen))
-            .reshape(info.outputShape);
-      }
-      await iso.run(input, output);
+      final Uint8List inputBytes = inT.type == TensorType.float32
+          ? pre.floats!.buffer.asUint8List()
+          : (pre.bytes as TypedData).buffer.asUint8List();
+      final outBytes = outT.type == TensorType.float32 ? outLen * 4 : outLen;
+      final outBuf = Uint8List(outBytes).buffer;
+      final tInf = DateTime.now().millisecondsSinceEpoch;
+      interp.run(inputBytes, outBuf);
+      final infMs = DateTime.now().millisecondsSinceEpoch - tInf;
 
-      // 3. Flatten + dequantise.
-      final flat = Float32List(outLen);
-      var i = 0;
-      void walk(Object o) {
-        if (o is List) {
-          for (final e in o) {
-            walk(e);
+      // 3. View + dequantise.
+      final Float32List flat;
+      switch (outT.type) {
+        case TensorType.float32:
+          flat = outBuf.asFloat32List();
+        case TensorType.int8:
+          final s = outT.params.scale, z = outT.params.zeroPoint;
+          final q = outBuf.asInt8List();
+          flat = Float32List(outLen);
+          for (var k = 0; k < outLen; k++) {
+            flat[k] = (q[k] - z) * s;
           }
-        } else if (o is num) {
-          flat[i++] = o.toDouble();
-        }
-      }
-      walk(output);
-      if (outT.type != TensorType.float32) {
-        final s = outT.params.scale, z = outT.params.zeroPoint;
-        for (var k = 0; k < outLen; k++) {
-          flat[k] = (flat[k] - z) * s;
-        }
+        default:
+          final s = outT.params.scale, z = outT.params.zeroPoint;
+          final q = outBuf.asUint8List();
+          flat = Float32List(outLen);
+          for (var k = 0; k < outLen; k++) {
+            flat[k] = (q[k] - z) * s;
+          }
       }
 
       // 4. Decode + NMS.
@@ -303,7 +293,9 @@ class TfliteDetector implements DetectorService {
       final ms = DateTime.now().millisecondsSinceEpoch - t0;
       _latencies.add(ms);
       if (_latencies.length > 20) _latencies.removeAt(0);
-      AppLogger.i(_tag, '${boxes.length} boxes in ${ms}ms (pre ${pre.ms}ms)');
+      AppLogger.i(_tag,
+          '${boxes.length} boxes in ${ms}ms (pre ${pre.ms} · infer $infMs · '
+          'post ${ms - pre.ms - infMs})');
       return Ok(boxes);
     } catch (e) {
       AppLogger.e(_tag, 'Inference failed', e);
@@ -312,9 +304,7 @@ class TfliteDetector implements DetectorService {
   }
 
   Future<void> close() async {
-    await _isolate?.close();
     _interpreter?.close();
-    _isolate = null;
     _interpreter = null;
     _info = null;
   }
