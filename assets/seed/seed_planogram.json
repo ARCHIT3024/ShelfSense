@@ -1,36 +1,490 @@
 [
-  {"store_id":"store-001","sku_id":"sku-001","target_facings":4,"shelf_row":1},
-  {"store_id":"store-001","sku_id":"sku-002","target_facings":2,"shelf_row":1},
-  {"store_id":"store-001","sku_id":"sku-004","target_facings":3,"shelf_row":2},
-  {"store_id":"store-001","sku_id":"sku-006","target_facings":6,"shelf_row":2},
-  {"store_id":"store-001","sku_id":"sku-008","target_facings":2,"shelf_row":3},
-  {"store_id":"store-001","sku_id":"sku-011","target_facings":3,"shelf_row":1},
-  {"store_id":"store-001","sku_id":"sku-016","target_facings":4,"shelf_row":3},
-  {"store_id":"store-001","sku_id":"sku-021","target_facings":3,"shelf_row":2},
-
-  {"store_id":"store-002","sku_id":"sku-001","target_facings":3,"shelf_row":1},
-  {"store_id":"store-002","sku_id":"sku-004","target_facings":4,"shelf_row":2},
-  {"store_id":"store-002","sku_id":"sku-006","target_facings":5,"shelf_row":2},
-  {"store_id":"store-002","sku_id":"sku-009","target_facings":2,"shelf_row":3},
-  {"store_id":"store-002","sku_id":"sku-012","target_facings":2,"shelf_row":1},
-  {"store_id":"store-002","sku_id":"sku-014","target_facings":4,"shelf_row":3},
-
-  {"store_id":"store-003","sku_id":"sku-001","target_facings":5,"shelf_row":1},
-  {"store_id":"store-003","sku_id":"sku-003","target_facings":2,"shelf_row":1},
-  {"store_id":"store-003","sku_id":"sku-005","target_facings":2,"shelf_row":2},
-  {"store_id":"store-003","sku_id":"sku-007","target_facings":4,"shelf_row":2},
-  {"store_id":"store-003","sku_id":"sku-010","target_facings":3,"shelf_row":3},
-  {"store_id":"store-003","sku_id":"sku-022","target_facings":2,"shelf_row":3},
-
-  {"store_id":"store-004","sku_id":"sku-001","target_facings":4,"shelf_row":1},
-  {"store_id":"store-004","sku_id":"sku-006","target_facings":6,"shelf_row":2},
-  {"store_id":"store-004","sku_id":"sku-008","target_facings":3,"shelf_row":3},
-  {"store_id":"store-004","sku_id":"sku-011","target_facings":2,"shelf_row":1},
-  {"store_id":"store-004","sku_id":"sku-024","target_facings":6,"shelf_row":2},
-
-  {"store_id":"store-005","sku_id":"sku-002","target_facings":3,"shelf_row":1},
-  {"store_id":"store-005","sku_id":"sku-004","target_facings":4,"shelf_row":2},
-  {"store_id":"store-005","sku_id":"sku-007","target_facings":3,"shelf_row":2},
-  {"store_id":"store-005","sku_id":"sku-013","target_facings":2,"shelf_row":3},
-  {"store_id":"store-005","sku_id":"sku-023","target_facings":4,"shelf_row":3}
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-001",
+  "target_facings": 4,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-002",
+  "target_facings": 2,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-004",
+  "target_facings": 3,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-006",
+  "target_facings": 6,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-008",
+  "target_facings": 2,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-011",
+  "target_facings": 3,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-016",
+  "target_facings": 4,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-001",
+  "sku_id": "sku-021",
+  "target_facings": 3,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-001",
+  "target_facings": 3,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-004",
+  "target_facings": 4,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-006",
+  "target_facings": 5,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-009",
+  "target_facings": 2,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-012",
+  "target_facings": 2,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-002",
+  "sku_id": "sku-014",
+  "target_facings": 4,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-001",
+  "target_facings": 5,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-003",
+  "target_facings": 2,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-005",
+  "target_facings": 2,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-007",
+  "target_facings": 4,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-010",
+  "target_facings": 3,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-003",
+  "sku_id": "sku-022",
+  "target_facings": 2,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-004",
+  "sku_id": "sku-001",
+  "target_facings": 4,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-004",
+  "sku_id": "sku-006",
+  "target_facings": 6,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-004",
+  "sku_id": "sku-008",
+  "target_facings": 3,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-004",
+  "sku_id": "sku-011",
+  "target_facings": 2,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-004",
+  "sku_id": "sku-024",
+  "target_facings": 6,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-005",
+  "sku_id": "sku-002",
+  "target_facings": 3,
+  "shelf_row": 1
+ },
+ {
+  "store_id": "store-005",
+  "sku_id": "sku-004",
+  "target_facings": 4,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-005",
+  "sku_id": "sku-007",
+  "target_facings": 3,
+  "shelf_row": 2
+ },
+ {
+  "store_id": "store-005",
+  "sku_id": "sku-013",
+  "target_facings": 2,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-005",
+  "sku_id": "sku-023",
+  "target_facings": 4,
+  "shelf_row": 3
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-001",
+  "target_facings": 4,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-002",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-004",
+  "target_facings": 3,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-006",
+  "target_facings": 6,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-008",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-011",
+  "target_facings": 3,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-016",
+  "target_facings": 4,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-006",
+  "sku_id": "sku-021",
+  "target_facings": 3,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-001",
+  "target_facings": 3,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-004",
+  "target_facings": 4,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-006",
+  "target_facings": 5,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-009",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-012",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-007",
+  "sku_id": "sku-014",
+  "target_facings": 4,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-001",
+  "target_facings": 5,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-003",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-005",
+  "target_facings": 2,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-007",
+  "target_facings": 4,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-010",
+  "target_facings": 3,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-008",
+  "sku_id": "sku-022",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-009",
+  "sku_id": "sku-001",
+  "target_facings": 4,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-009",
+  "sku_id": "sku-006",
+  "target_facings": 6,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-009",
+  "sku_id": "sku-008",
+  "target_facings": 3,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-009",
+  "sku_id": "sku-011",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-009",
+  "sku_id": "sku-024",
+  "target_facings": 6,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-010",
+  "sku_id": "sku-002",
+  "target_facings": 3,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-010",
+  "sku_id": "sku-004",
+  "target_facings": 4,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-010",
+  "sku_id": "sku-007",
+  "target_facings": 3,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-010",
+  "sku_id": "sku-013",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-010",
+  "sku_id": "sku-023",
+  "target_facings": 4,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-001",
+  "target_facings": 4,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-002",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-004",
+  "target_facings": 3,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-006",
+  "target_facings": 6,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-008",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-011",
+  "target_facings": 3,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-016",
+  "target_facings": 4,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-011",
+  "sku_id": "sku-021",
+  "target_facings": 3,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-001",
+  "target_facings": 3,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-004",
+  "target_facings": 4,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-006",
+  "target_facings": 5,
+  "shelf_row": 2,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-009",
+  "target_facings": 2,
+  "shelf_row": 3,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-012",
+  "target_facings": 2,
+  "shelf_row": 1,
+  "source": "default"
+ },
+ {
+  "store_id": "store-012",
+  "sku_id": "sku-014",
+  "target_facings": 4,
+  "shelf_row": 3,
+  "source": "default"
+ }
 ]

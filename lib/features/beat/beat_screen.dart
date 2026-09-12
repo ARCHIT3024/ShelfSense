@@ -156,8 +156,13 @@ class _BeatScreenState extends ConsumerState<BeatScreen> {
     final visits = await (db.select(db.visits)
           ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
         .get();
+    // A draft with no photo yet is just "Start Visit" then back — it must
+    // not demote a Done store to Resume. Only drafts with a photo count.
+    final photoVisitIds =
+        (await db.select(db.visitPhotos).get()).map((p) => p.visitId).toSet();
     final latest = <String, Visit>{};
     for (final v in visits) {
+      if (v.status == 'draft' && !photoVisitIds.contains(v.id)) continue;
       latest.putIfAbsent(v.storeId, () => v);
     }
     final confirmedIds = [

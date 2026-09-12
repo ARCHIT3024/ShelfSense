@@ -13,7 +13,10 @@ Future<void> runSeed(AppDatabase db) async {
   try {
     final beatCount = await db.select(db.beats).get();
     if (beatCount.isNotEmpty) {
-      AppLogger.i(_tag, 'Seed already applied — skipping');
+      // Already seeded: still top up planogram rows added to the seed file
+      // later (unique on store+sku, insertOrIgnore, so this is idempotent).
+      await _seedPlanogram(db);
+      AppLogger.i(_tag, 'Seed already applied — planogram topped up');
       return;
     }
     AppLogger.i(_tag, 'Running initial seed…');
@@ -100,7 +103,7 @@ Future<void> _seedPlanogram(AppDatabase db) async {
         skuId: m['sku_id'] as String,
         targetFacings: m['target_facings'] as int,
         shelfRow: Value(m['shelf_row'] as int?),
-        source: 'manual',
+        source: (m['source'] as String?) ?? 'manual',
         updatedAt: now,
       ), mode: InsertMode.insertOrIgnore);
     }
