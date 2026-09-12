@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,9 @@ import '../../app/di.dart';
 import '../../app/theme.dart';
 import '../../core/logger.dart';
 import '../../data/db/database.dart';
+import '../../core/result.dart';
 import '../../ml/common/thresholds.dart';
+import '../../ml/embedder/sku_index.dart' show MatchRoute, routeScore;
 import 'enrol_camera.dart';
 import 'enrolment_repository.dart';
 
@@ -60,11 +63,88 @@ class _EnrolmentScreenState extends ConsumerState<EnrolmentScreen> {
   int? _selectedSlot; // rep override of which slot to shoot next
   bool _busy = false;
 
+  // "Test it now" — re-run the last shelf photo against the updated index.
+  bool _testing = false;
+  String? _testResult;
+
+  bool get _recogniserReady {
+    final d = ref.read(detectorProvider);
+    final e = ref.read(embedderProvider);
+    return d != null && d.isLoaded && e != null && e.isLoaded;
+  }
+
+  /// Detect on the most recent shelf photo, embed every box, count how many
+  /// the index now attributes to this SKU. Nothing is written to the DB.
+  Future<void> _runTest() async {
+    final sku = _sku;
+    if (sku == null || _testing) return;
+    setState(() {
+      _testing = true;
+      _testResult = null;
+    });
+    try {
+      final db = ref.read(dbProvider);
+      final photo = await (db.select(db.visitPhotos)
+            ..orderBy([(t) => OrderingTerm.desc(t.capturedAt)])
+            ..limit(1))
+          .getSingleOrNull();
+      if (photo == null || !await File(photo.filePath).exists()) {
+        _testResult = 'No shelf photo yet — photograph a rack first.';
+        return;
+      }
+      final index = ref.read(skuIndexProvider);
+      await index.refresh();
+      final det = await ref.read(detectorProvider)!.detect(photo.filePath);
+      final boxes = switch (det) {
+        Ok(:final value) => value,
+        Err(:final failure) => throw StateError(failure.message),
+      };
+      if (boxes.isEmpty) {
+        _testResult = 'No packs found on the last shelf photo.';
+        return;
+      }
+      final emb =
+          await ref.read(embedderProvider)!.embedBoxes(photo.filePath, boxes);
+      final vectors = switch (emb) {
+        Ok(:final value) => value,
+        Err(:final failure) => throw StateError(failure.message),
+      };
+      var hits = 0, low = 0;
+      for (final v in vectors) {
+        if (v == null) continue;
+        final top = index.topMatches(v, k: 1);
+        if (top.isEmpty || top.first.skuId != sku.id) continue;
+        switch (routeScore(top.first.confidence)) {
+          case MatchRoute.accept:
+            hits++;
+          case MatchRoute.lowConfidence:
+            low++;
+          case MatchRoute.unmatched:
+            break;
+        }
+      }
+      _testResult = hits > 0
+          ? '$hits of ${boxes.length} packs recognised as ${sku.name}'
+              '${low > 0 ? ' (+$low low-confidence)' : ''}'
+          : low > 0
+              ? '$low of ${boxes.length} packs look like ${sku.name}, '
+                  'but below the accept threshold — add shots'
+              : 'Not recognised on the last shelf photo — '
+                  'add shots in different light';
+    } catch (e) {
+      AppLogger.e(_tag, 'Test failed', e);
+      _testResult = 'Test failed: $e';
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _repo = EnrolmentRepository(
-        ref.read(dbProvider), ref.read(embedderProvider));
+        ref.read(dbProvider), ref.read(embedderProvider),
+        index: ref.read(skuIndexProvider));
     _pendingCrop = widget.preloadedCropPath;
     if (widget.skuId != null) _openExisting(widget.skuId!);
   }
@@ -265,8 +345,9 @@ class _EnrolmentScreenState extends ConsumerState<EnrolmentScreen> {
   Widget _buildTest() {
     final sku = _sku!;
     final embedded = _shots.where((s) => s.embedded).length;
-    final hasModel = ref.read(embedderProvider) != null;
+    final hasModel = ref.read(embedderProvider)?.isLoaded ?? false;
     final enrolled = embedded >= kMinEnrolShots;
+    final canTest = _recogniserReady;
 
     return Padding(
       padding: const EdgeInsets.all(Sp.screen),
@@ -331,6 +412,32 @@ class _EnrolmentScreenState extends ConsumerState<EnrolmentScreen> {
                 style: AppText.body,
               ),
             ),
+          if (canTest) ...[
+            const SizedBox(height: Sp.sm),
+            SizedBox(
+              height: Tap.counter,
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryDim,
+                  foregroundColor: AppColors.textPrimary,
+                ),
+                onPressed: _testing ? null : _runTest,
+                icon: const Icon(Icons.bolt),
+                label: Text(_testing
+                    ? 'Re-running last shelf photo…'
+                    : 'Test it now'),
+              ),
+            ),
+            if (_testResult != null) ...[
+              const SizedBox(height: Sp.md),
+              Text(_testResult!,
+                  style: AppText.body.copyWith(
+                    color: _testResult!.contains('recognised as')
+                        ? AppColors.success
+                        : AppColors.textSecondary,
+                  )),
+            ],
+          ],
           const Spacer(),
           SizedBox(
             height: Tap.counter,

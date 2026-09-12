@@ -29,9 +29,14 @@ class EnrolShot {
 }
 
 class EnrolmentRepository {
-  EnrolmentRepository(this.db, this.embedder);
+  EnrolmentRepository(this.db, this.embedder, {this.index});
   final AppDatabase db;
   final EmbedderService? embedder;
+
+  /// Refreshed after any embedding change so the next shelf photo sees the
+  /// new pack at once. Optional so the start-up back-fill can run before
+  /// the index exists.
+  final SkuIndex? index;
 
   // ---- SKUs -------------------------------------------------------------
 
@@ -162,7 +167,7 @@ class EnrolmentRepository {
 
     var embedded = false;
     final e = embedder;
-    if (e != null) {
+    if (e != null && e.isLoaded) {
       switch (await e.embed(dest)) {
         case Ok(:final value):
           await _insertEmbedding(skuId, dest, context, value);
@@ -172,6 +177,7 @@ class EnrolmentRepository {
       }
     }
     await refreshEnrolledFlag(skuId);
+    if (embedded) await index?.refresh();
     return EnrolShot(path: dest, context: context, embedded: embedded);
   }
 
@@ -182,6 +188,7 @@ class EnrolmentRepository {
     final f = File(shot.path);
     if (await f.exists()) await f.delete();
     await refreshEnrolledFlag(skuId);
+    await index?.refresh();
   }
 
   Future<void> _insertEmbedding(
@@ -213,7 +220,7 @@ class EnrolmentRepository {
   /// existed become recognisable without re-shooting.
   Future<int> backfillPendingEmbeddings() async {
     final e = embedder;
-    if (e == null) return 0;
+    if (e == null || !e.isLoaded) return 0;
     var done = 0;
     for (final sku in await activeSkus()) {
       for (final shot in await shots(sku.id)) {
@@ -226,6 +233,7 @@ class EnrolmentRepository {
       await refreshEnrolledFlag(sku.id);
     }
     AppLogger.i(_tag, 'Back-filled $done embeddings');
+    if (done > 0) await index?.refresh();
     return done;
   }
 

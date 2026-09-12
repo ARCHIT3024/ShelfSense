@@ -12,7 +12,8 @@ import '../../app/theme.dart';
 import '../../core/ids.dart';
 import '../../core/logger.dart';
 import '../../core/result.dart';
-import '../../domain/models/models.dart' show RawBox;
+import '../../domain/models/models.dart' show RawBox, SkuCandidate;
+import '../../ml/embedder/sku_index.dart' show MatchRoute, routeScore;
 import '../../data/db/database.dart';
 
 const _tag = 'CaptureScreen';
@@ -153,9 +154,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     return (1920, 1080); // fallback
   }
 
-  /// Stage A of the pipeline: detector → one `detections` row per box.
-  /// With no detector loaded (T-12/T-13 pending) nothing is inserted and the
-  /// rep draws boxes on /review — honest, and the loop still demos.
+  /// Stages A + B of the pipeline: detector → recogniser → one `detections`
+  /// row per box. With no detector loaded (T-12/T-13 pending) nothing is
+  /// inserted and the rep draws boxes on /review; with no embedder or an
+  /// empty index (T-14 pending / nothing enrolled) boxes stay unmatched and
+  /// the rep tags them — honest, and the loop still demos.
   Future<void> _runPipeline(AppDatabase db, String visitId, String photoId,
       String imagePath, int w, int h) async {
     final detector = ref.read(detectorProvider);
@@ -171,9 +174,45 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     }
     final latencyMs = DateTime.now().millisecondsSinceEpoch - t0;
 
+    // Stage B: embed every box against the enrolled index.
+    final embedder = ref.read(embedderProvider);
+    final index = ref.read(skuIndexProvider);
+    final matches = List<SkuCandidate?>.filled(boxes.length, null);
+    if (boxes.isNotEmpty && embedder != null && embedder.isLoaded && !index.isEmpty) {
+      if (mounted) setState(() => _processingStage = 'Recognising…');
+      final tB = DateTime.now().millisecondsSinceEpoch;
+      switch (await embedder.embedBoxes(imagePath, boxes)) {
+        case Ok(:final value):
+          var accepted = 0, low = 0;
+          for (var i = 0; i < boxes.length; i++) {
+            final v = value[i];
+            if (v == null) continue;
+            final top = index.topMatches(v, k: 1);
+            if (top.isEmpty) continue;
+            switch (routeScore(top.first.confidence)) {
+              case MatchRoute.accept:
+                matches[i] = top.first;
+                accepted++;
+              case MatchRoute.lowConfidence:
+                matches[i] = top.first;
+                low++;
+              case MatchRoute.unmatched:
+                break;
+            }
+          }
+          AppLogger.i(_tag,
+              'Recognised $accepted + $low low-confidence of ${boxes.length} '
+              'in ${DateTime.now().millisecondsSinceEpoch - tB}ms');
+        case Err(:final failure):
+          AppLogger.e(_tag, 'Embedder failed — boxes left unmatched', failure);
+      }
+    }
+
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.batch((b) {
-      for (final box in boxes) {
+      for (var i = 0; i < boxes.length; i++) {
+        final box = boxes[i];
+        final m = matches[i];
         b.insert(db.detections, DetectionsCompanion.insert(
               id: newId(),
               visitId: visitId,
@@ -183,6 +222,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               x2: box.x2,
               y2: box.y2,
               detConfidence: box.score,
+              skuId: Value(m?.skuId),
+              matchConfidence: Value(m?.confidence),
+              matchMethod: Value(m == null ? 'unmatched' : 'embedding'),
               createdAt: now,
             ));
       }
