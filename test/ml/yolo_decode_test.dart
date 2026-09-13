@@ -147,15 +147,16 @@ void main() {
         RawBox(x1: x1, y1: y1, x2: x2, y2: y2, score: s);
 
     test('unions two stacked halves of one can', () {
-      // The real case: logo band and lower band, same column, small gap.
+      // The real case from the phone: logo band and lower band, offset
+      // diagonally and of different widths, touching.
       final m = mergeStackedFragments([
-        b(0.60, 0.40, 0.76, 0.52, 0.70),
-        b(0.61, 0.53, 0.77, 0.63, 0.65),
+        b(0.22, 0.42, 0.37, 0.59, 0.58),
+        b(0.28, 0.58, 0.51, 0.72, 0.69),
       ]);
       expect(m, hasLength(1));
-      expect(m.single.y1, closeTo(0.40, 1e-9));
-      expect(m.single.y2, closeTo(0.63, 1e-9));
-      expect(m.single.score, 0.70);
+      expect(m.single.y1, closeTo(0.42, 1e-9));
+      expect(m.single.y2, closeTo(0.72, 1e-9));
+      expect(m.single.score, 0.69);
     });
 
     test('keeps side-by-side cans separate', () {

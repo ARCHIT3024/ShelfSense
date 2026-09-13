@@ -135,7 +135,7 @@ List<RawBox> nms(List<RawBox> boxes,
 /// are unioned into a single box carrying the higher score.
 List<RawBox> mergeStackedFragments(
   List<RawBox> boxes, {
-  double minXOverlap = 0.7,
+  double minXOverlap = 0.5,
   double maxGapFrac = 0.35,
 }) {
   if (boxes.length < 2) return boxes;
@@ -149,8 +149,12 @@ List<RawBox> mergeStackedFragments(
         final xo = math.min(a.x2, b.x2) - math.max(a.x1, b.x1);
         final narrower = math.min(a.width, b.width);
         if (narrower <= 0 || xo / narrower < minXOverlap) continue;
-        final gap = math.max(a.y1, b.y1) - math.min(a.y2, b.y2); // <0 = overlap
+        // Side-by-side products overlap horizontally too; only merge when
+        // the boxes are stacked (little vertical overlap) not adjacent.
+        final yo = math.min(a.y2, b.y2) - math.max(a.y1, b.y1);
         final shorter = math.min(a.height, b.height);
+        if (yo > 0.5 * shorter) continue;
+        final gap = -yo; // <0 = overlap
         if (gap > maxGapFrac * shorter) continue;
         out[i] = RawBox(
           x1: math.min(a.x1, b.x1),

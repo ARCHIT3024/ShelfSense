@@ -8,8 +8,8 @@ const double kDetNmsIou = 0.50;
 const int kDetMaxBoxes = 300; // dense supermarket shelves exceed 100; NMS cost is trivial
 
 // Matcher
-const double kMatchHigh = 0.60; // 17-SKU index: runner-up sits ~0.4, so 0.60 keeps a clear margin
-const double kMatchLow = 0.45; // below this = unmatched
+const double kMatchHigh = 0.55; // 17-SKU index: runner-up sits ~0.4-0.5; live correct hits land 0.51-0.85
+const double kMatchLow = 0.40; // below this = unmatched
 
 // Enrolment
 const int kMinEnrolShots = 3;

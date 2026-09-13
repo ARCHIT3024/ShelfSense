@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Bumped whenever the compiled threshold defaults change, so an existing
   /// install re-seeds them (the Diagnostics sliders still override after).
-  static const _thresholdDefaultsVersion = '2';
+  static const _thresholdDefaultsVersion = '3';
 
   Future<void> _seedSettings() async {
     final now = DateTime.now().millisecondsSinceEpoch;
