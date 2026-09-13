@@ -1,4 +1,6 @@
 import 'package:drift/drift.dart';
+
+import '../../ml/common/thresholds.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -51,14 +53,18 @@ class AppDatabase extends _$AppDatabase {
 
   // ---- settings helpers ------------------------------------------------
 
+  /// Bumped whenever the compiled threshold defaults change, so an existing
+  /// install re-seeds them (the Diagnostics sliders still override after).
+  static const _thresholdDefaultsVersion = '2';
+
   Future<void> _seedSettings() async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final defaults = {
-      'det_conf_threshold': '0.35',
-      'det_nms_iou': '0.50',
-      'det_max_boxes': '100',
-      'match_high': '0.72',
-      'match_low': '0.55',
+      'det_conf_threshold': '$kDetConfThreshold',
+      'det_nms_iou': '$kDetNmsIou',
+      'det_max_boxes': '$kDetMaxBoxes',
+      'match_high': '$kMatchHigh',
+      'match_low': '$kMatchLow',
       'min_enrol_shots': '3',
       'target_enrol_shots': '8',
       'gap_min_area': '0.004',
@@ -80,6 +86,19 @@ class AppDatabase extends _$AppDatabase {
         );
       }
     });
+  }
+
+  /// Re-applies the compiled threshold defaults if they changed since this
+  /// install last seeded them. Called once at start-up before thresholds load.
+  Future<void> refreshThresholdDefaultsIfStale() async {
+    final v = await getSetting('threshold_defaults_version');
+    if (v == _thresholdDefaultsVersion) return;
+    await setSetting('det_conf_threshold', '$kDetConfThreshold');
+    await setSetting('det_nms_iou', '$kDetNmsIou');
+    await setSetting('det_max_boxes', '$kDetMaxBoxes');
+    await setSetting('match_high', '$kMatchHigh');
+    await setSetting('match_low', '$kMatchLow');
+    await setSetting('threshold_defaults_version', _thresholdDefaultsVersion);
   }
 
   Future<String?> getSetting(String key) async {

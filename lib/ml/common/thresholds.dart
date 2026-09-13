@@ -3,13 +3,13 @@
 library;
 
 // Detector
-const double kDetConfThreshold = 0.35;
+const double kDetConfThreshold = 0.25; // large-object scenes sit 0.25-0.4; NMS removes the extras
 const double kDetNmsIou = 0.50;
 const int kDetMaxBoxes = 300; // dense supermarket shelves exceed 100; NMS cost is trivial
 
 // Matcher
-const double kMatchHigh = 0.72; // accept
-const double kMatchLow = 0.55; // below this = unmatched
+const double kMatchHigh = 0.60; // 17-SKU index: runner-up sits ~0.4, so 0.60 keeps a clear margin
+const double kMatchLow = 0.45; // below this = unmatched
 
 // Enrolment
 const int kMinEnrolShots = 3;

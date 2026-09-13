@@ -2,6 +2,8 @@
 /// These are the objects that flow between services and UI.
 library;
 
+import '../../ml/common/thresholds.dart';
+
 // -----------------------------------------------------------------------
 // Enums
 // -----------------------------------------------------------------------
@@ -67,7 +69,7 @@ class MatchedBox {
 
   bool get isMatched => skuId != null && method != MatchMethod.unmatched;
   bool get isLowConfidence =>
-      matchConfidence != null && matchConfidence! < 0.72 && isMatched;
+      matchConfidence != null && matchConfidence! < kMatchHigh && isMatched;
 }
 
 class SkuCandidate {

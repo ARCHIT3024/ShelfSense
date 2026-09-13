@@ -76,6 +76,7 @@ class _ShelfSenseAppState extends ConsumerState<ShelfSenseApp>
   Future<void> _loadThresholds() async {
     try {
       final db = ref.read(dbProvider);
+      await db.refreshThresholdDefaultsIfStale();
       final rows = await db.select(db.appSettings).get();
       ref
           .read(thresholdsProvider)

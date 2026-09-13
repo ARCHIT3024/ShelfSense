@@ -175,7 +175,7 @@ void main() {
           box: RawBox(x1: 0, y1: 0, x2: 0.1, y2: 0.1, score: 0.9),
           detConfidence: 0.9,
           skuId: 'sku-1',
-          matchConfidence: 0.60, // between kMatchLow and kMatchHigh
+          matchConfidence: 0.50, // between kMatchLow and kMatchHigh
           method: MatchMethod.embedding,
           isGap: false,
           wasCorrected: false,
