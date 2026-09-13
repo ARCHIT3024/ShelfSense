@@ -1,6 +1,5 @@
 # ShelfSense
 
-> **Judges:** start with [`SUBMISSION.md`](SUBMISSION.md) — one-page summary, numbers, limitations, where everything is. Demo script: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
 
 Offline shelf audit and ordering for kirana distributor reps. The rep photographs a shop's rack;
 the phone finds every pack, recognises which SKU each one is, diffs the shelf against the store's
