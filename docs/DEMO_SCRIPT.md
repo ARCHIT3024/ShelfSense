@@ -45,3 +45,20 @@ Total ≈ 3 minutes with the shutter at the 35-second mark.
 | App **crashes** | Reopen — the visit is a draft with its photo; **Resume** on the beat. | "Every step is persisted before the next one runs." |
 
 Never say "AI". Say what it did: found, recognised, drafted, wrote.
+
+## Framing rule (learned 13 Sep 07:00 — read this)
+
+The Pack Finder was trained on SKU-110K shelves, where each pack is a few percent of the image.
+**It finds nothing when one or two packs fill the frame.** Evidence from the demo phone:
+
+| Framing | Result |
+|---|---|
+| Cans/bottle at ~15–25 % of frame height, ~1 m away, several in view | boxed and recognised (Red Bull 0.6–0.85, Thums Up 0.6–0.76) |
+| Two cans filling half the frame, close up | **0 boxes**, five shots in a row |
+| Dense supermarket shelf photo | 100/100 packs |
+
+So: **arrange packs shelf-style and shoot from about a metre.** If a judge wants a close-up, use
+the manual path — long-press-drag a box; the recogniser labels it green in ~150 ms. Every manual
+tag is logged as an override event, which is a feature worth saying out loud.
+
+Detector confidence is 0.25 and match accept 0.55 (Diagnostics → Thresholds) — leave them.
