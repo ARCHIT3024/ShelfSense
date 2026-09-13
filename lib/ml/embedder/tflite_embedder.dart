@@ -99,7 +99,10 @@ class TfliteEmbedder extends EmbedderService {
       try {
         bytes = (await rootBundle.load(path)).buffer.asUint8List();
         loadedAsset = path;
-        fingerprint = '$path:${bytes.length}';
+        // Content hash, not length: a retrain with the same architecture
+        // produces an identically-sized file, and stale vectors from the
+        // previous weights would silently mis-match every box.
+        fingerprint = '$path:${_fnv1a(bytes)}';
         break;
       } catch (_) {
         // not bundled — try the next candidate
@@ -365,4 +368,15 @@ Future<_PreResult> _preprocess(_PreJob job) async {
   }
   return _PreResult(
       inputs: inputs, ms: DateTime.now().millisecondsSinceEpoch - t0);
+}
+
+/// 64-bit FNV-1a over the model bytes — fast enough for a 2 MB asset at
+/// start-up and stable across platforms.
+String _fnv1a(Uint8List bytes) {
+  var h = 0xcbf29ce484222325;
+  for (final b in bytes) {
+    h ^= b;
+    h = (h * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  }
+  return h.toRadixString(16);
 }

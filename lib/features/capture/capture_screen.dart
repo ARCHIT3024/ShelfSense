@@ -195,6 +195,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             if (v == null) continue;
             final top = index.topMatches(v, k: 3);
             if (top.isEmpty) continue;
+            // Per-box trace: which SKU came closest and by how much. This
+            // is what T-25 tuning reads to decide the accept/reject bands.
+            AppLogger.i(_tag,
+                'box $i → ${top.map((c) => '${c.skuCode} ${c.confidence.toStringAsFixed(2)}').join(' | ')}');
             switch (routeScore(top.first.confidence,
                 high: thresholds.matchHigh, low: thresholds.matchLow)) {
               case MatchRoute.accept:
