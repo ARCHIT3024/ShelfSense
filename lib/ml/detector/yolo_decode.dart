@@ -124,3 +124,46 @@ List<RawBox> nms(List<RawBox> boxes,
   }
   return kept;
 }
+
+/// Merges boxes that are vertical fragments of one tall product.
+///
+/// SKU-110K teaches the detector roughly square pack fronts, so a tall can
+/// or bottle often comes back as two stacked boxes (logo band + lower
+/// band) that NMS keeps because they barely overlap. Two boxes whose
+/// horizontal extents overlap by ≥ [minXOverlap] of the narrower one and
+/// whose vertical gap is at most [maxGapFrac] of the shorter one's height
+/// are unioned into a single box carrying the higher score.
+List<RawBox> mergeStackedFragments(
+  List<RawBox> boxes, {
+  double minXOverlap = 0.7,
+  double maxGapFrac = 0.35,
+}) {
+  if (boxes.length < 2) return boxes;
+  final out = <RawBox>[...boxes]..sort((a, b) => a.y1.compareTo(b.y1));
+  var merged = true;
+  while (merged) {
+    merged = false;
+    for (var i = 0; i < out.length && !merged; i++) {
+      for (var j = i + 1; j < out.length; j++) {
+        final a = out[i], b = out[j];
+        final xo = math.min(a.x2, b.x2) - math.max(a.x1, b.x1);
+        final narrower = math.min(a.width, b.width);
+        if (narrower <= 0 || xo / narrower < minXOverlap) continue;
+        final gap = math.max(a.y1, b.y1) - math.min(a.y2, b.y2); // <0 = overlap
+        final shorter = math.min(a.height, b.height);
+        if (gap > maxGapFrac * shorter) continue;
+        out[i] = RawBox(
+          x1: math.min(a.x1, b.x1),
+          y1: math.min(a.y1, b.y1),
+          x2: math.max(a.x2, b.x2),
+          y2: math.max(a.y2, b.y2),
+          score: math.max(a.score, b.score),
+        );
+        out.removeAt(j);
+        merged = true;
+        break;
+      }
+    }
+  }
+  return out;
+}

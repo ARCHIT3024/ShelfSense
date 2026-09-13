@@ -141,4 +141,37 @@ void main() {
       expect(iou(b(0, 0, 0.4, 0.4, 1), b(0.5, 0.5, 1, 1, 1)), 0);
     });
   });
+
+  group('mergeStackedFragments', () {
+    RawBox b(double x1, double y1, double x2, double y2, double s) =>
+        RawBox(x1: x1, y1: y1, x2: x2, y2: y2, score: s);
+
+    test('unions two stacked halves of one can', () {
+      // The real case: logo band and lower band, same column, small gap.
+      final m = mergeStackedFragments([
+        b(0.60, 0.40, 0.76, 0.52, 0.70),
+        b(0.61, 0.53, 0.77, 0.63, 0.65),
+      ]);
+      expect(m, hasLength(1));
+      expect(m.single.y1, closeTo(0.40, 1e-9));
+      expect(m.single.y2, closeTo(0.63, 1e-9));
+      expect(m.single.score, 0.70);
+    });
+
+    test('keeps side-by-side cans separate', () {
+      final m = mergeStackedFragments([
+        b(0.40, 0.40, 0.55, 0.70, 0.7),
+        b(0.60, 0.40, 0.75, 0.70, 0.7),
+      ]);
+      expect(m, hasLength(2));
+    });
+
+    test('keeps shelf rows separate (large vertical gap)', () {
+      final m = mergeStackedFragments([
+        b(0.40, 0.10, 0.55, 0.30, 0.7),
+        b(0.40, 0.50, 0.55, 0.70, 0.7),
+      ]);
+      expect(m, hasLength(2));
+    });
+  });
 }

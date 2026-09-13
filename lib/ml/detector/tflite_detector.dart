@@ -277,7 +277,7 @@ class TfliteDetector implements DetectorService {
       }
 
       // 4. Decode + NMS.
-      final boxes = nms(
+      final boxes = mergeStackedFragments(nms(
         decodeYolo(
           flat,
           channels: info.channels,
@@ -288,7 +288,7 @@ class TfliteDetector implements DetectorService {
         ),
         iouThreshold: config.nmsIou,
         maxBoxes: config.maxBoxes,
-      );
+      ));
 
       final ms = DateTime.now().millisecondsSinceEpoch - t0;
       _latencies.add(ms);
